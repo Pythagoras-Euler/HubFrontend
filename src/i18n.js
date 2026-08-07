@@ -7,6 +7,7 @@ import en from "./languages/en.json";
 import es from "./languages/es.json";
 import nl from "./languages/nl.json";
 import pt from "./languages/pt.json";
+import zh from "./languages/zh.json";
 
 i18n.use(LanguageDetector)
     .use(initReactI18next)
@@ -17,6 +18,7 @@ i18n.use(LanguageDetector)
             es: { translation: es },
             nl: { translation: nl },
             pt: { translation: pt },
+            zh: { translation: zh },
         },
         fallbackLng: "en",
         detection: {
