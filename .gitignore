@@ -16,6 +16,7 @@ todos.txt
 # production
 /build
 /dist
+/.vite
 
 # misc
 .DS_Store
@@ -38,3 +39,6 @@ config.json
 build-electron/assets/*
 !build-electron/assets/logo.png
 build-electron/output
+
+# Container/local runtime files
+.docker-state/
