@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { AppContext, CacheContext } from "../context";
 
 import { Card, CardContent, CardMedia, Typography, Grid, Dialog, DialogActions, DialogContent, DialogTitle, Button, IconButton, Snackbar, Alert, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField, SpeedDial, SpeedDialIcon, SpeedDialAction, InputAdornment, Box } from "@mui/material";
-import { LocalParkingRounded, TimeToLeaveRounded, FlightTakeoffRounded, FlightLandRounded, RouteRounded, HowToRegRounded, LocalShippingRounded, EmojiEventsRounded, EditRounded, DeleteRounded, CheckBoxRounded, CheckBoxOutlineBlankRounded, PeopleAltRounded, EditNoteRounded, CloseRounded } from "@mui/icons-material";
+import { LocalParkingRounded, TimeToLeaveRounded, FlightTakeoffRounded, FlightLandRounded, RouteRounded, HowToRegRounded, LocalShippingRounded, EmojiEventsRounded, EditRounded, DeleteRounded, CheckBoxRounded, CheckBoxOutlineBlankRounded, PeopleAltRounded, EditNoteRounded, CloseRounded, CloudSyncRounded } from "@mui/icons-material";
 import Portal from "@mui/material/Portal";
 
 import FullCalendar from "@fullcalendar/react";
@@ -609,7 +609,7 @@ const EventsMemo = memo(({ upcomingEvents, setUpcomingEvents, calendarEvents, se
     return (
         <>
             <Card sx={{ padding: "20px" }}>
-                <FullCalendar plugins={[dayGridPlugin]} initialView="dayGridMonth" events={calendarEvents} contentHeight="auto" eventClick={handleEventClick} datesSet={handleDateSet} locale={userSettings.language} firstDay={getFirstDay(userSettings.language)} />
+                <FullCalendar key={doReload} plugins={[dayGridPlugin]} initialView="dayGridMonth" events={calendarEvents} contentHeight="auto" eventClick={handleEventClick} datesSet={handleDateSet} locale={userSettings.language} firstDay={getFirstDay(userSettings.language)} />
                 {curMonthCount !== -1 && attendedCount !== -1 && (
                     <Box sx={{ textAlign: "right" }}>
                         <Typography variant="body2">
@@ -774,6 +774,7 @@ const Events = () => {
     );
 
     const [importDisabled, setImportDisabled] = useState(false);
+    const [syncLoading, setSyncLoading] = useState(false);
     const importTMPEvent = useCallback(async () => {
         setImportDisabled(true);
 
@@ -801,6 +802,35 @@ const Events = () => {
             setImportDisabled(false);
         }, 50);
     }, [link, apiPath]);
+
+    const syncTruckersMPEvents = useCallback(async () => {
+        if (syncLoading) return;
+
+        setSyncLoading(true);
+        try {
+            const resp = await axios.post(
+                `${apiPath}/events/truckersmp/sync`,
+                {},
+                {
+                    headers: { Authorization: `Bearer ${getAuthToken()}` },
+                }
+            );
+
+            if (resp.status === 200) {
+                setDoReload(+new Date());
+                setSnackbarContent(tr("truckersmp_events_synced", resp.data));
+                setSnackbarSeverity("success");
+            } else {
+                setSnackbarContent(resp.data?.error || tr("unknown_error_please_try_again_later"));
+                setSnackbarSeverity("error");
+            }
+        } catch {
+            setSnackbarContent(tr("unknown_error_please_try_again_later"));
+            setSnackbarSeverity("error");
+        } finally {
+            setSyncLoading(false);
+        }
+    }, [apiPath, syncLoading, tr]);
 
     const editEventAttendees = useCallback(
         async eventid => {
@@ -1048,6 +1078,7 @@ const Events = () => {
             </Dialog>
             <SpeedDial ariaLabel={tr("controls")} sx={{ position: "fixed", bottom: 20, right: 20 }} icon={<SpeedDialIcon />}>
                 {checkUserPerm(curUserPerm, ["administrator", "manage_events"]) && <SpeedDialAction key="create" icon={<EditNoteRounded />} tooltipTitle={tr("create")} onClick={() => createEvent()} />}
+                {checkUserPerm(curUserPerm, ["administrator", "manage_events"]) && <SpeedDialAction key="sync-truckersmp" icon={<CloudSyncRounded />} tooltipTitle={tr("sync_truckersmp_events")} onClick={syncTruckersMPEvents} />}
                 {curUser.userid !== -1 && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogManagers(true)} />}
             </SpeedDial>
             <Dialog open={dialogDelete} onClose={() => setDialogDelete(false)}>
