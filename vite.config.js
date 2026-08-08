@@ -4,7 +4,10 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
     return {
-        base: env.ASSETS_BASE,
+        // An empty Vite base emits relative asset URLs ("./assets/...").
+        // OAuth callbacks live under nested routes, so those URLs resolve to
+        // /auth/<provider>/assets/... and prevent React from starting.
+        base: env.ASSETS_BASE || '/',
         plugins: [react()],
         resolve: {
             extensions: ['.js', '.jsx', '.json']
