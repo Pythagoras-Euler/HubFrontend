@@ -14,6 +14,9 @@ import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 import { customAxios as axios } from "../../functions";
 
+const HCAPTCHA_SITEKEY = import.meta.env.VITE_HCAPTCHA_SITEKEY;
+const CAPTCHA_ENABLED = import.meta.env.VITE_HUB_TEST_DISABLE_CAPTCHA !== "true";
+
 const AuthLogin = () => {
     const { t: tr } = useTranslation();
     const { apiPath, apiConfig, webConfig } = useContext(AppContext);
@@ -101,6 +104,13 @@ const AuthLogin = () => {
         },
         [apiPath, action, email, password]
     );
+
+    // Test deployments submit the same auth flow without rendering hCaptcha.
+    useEffect(() => {
+        if (modalCaptcha && !CAPTCHA_ENABLED) {
+            handleCaptcha("");
+        }
+    }, [modalCaptcha, handleCaptcha]);
 
     return (
         <div
@@ -247,7 +257,7 @@ const AuthLogin = () => {
                     &nbsp;&nbsp;{tr("are_you_a_robot")}
                 </DialogTitle>
                 <DialogContent>
-                    <HCaptcha theme={themeMode} sitekey="1788882d-3695-4807-abac-7d7166ec6325" onVerify={handleCaptcha} />
+                    {CAPTCHA_ENABLED && <HCaptcha theme={themeMode} sitekey={HCAPTCHA_SITEKEY} onVerify={handleCaptcha} />}
                 </DialogContent>
             </Dialog>
             <Portal>
