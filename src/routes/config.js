@@ -962,8 +962,13 @@ const MemoDlogForm = memo(({ theme, formConfig }) => {
     );
 });
 
-const MemoDiscordSteamForm = memo(({ theme, formConfig }) => {
+const MemoDiscordSteamForm = memo(({ theme, formConfig, protectedConfig }) => {
     const { t: tr } = useTranslation();
+    const secretPlaceholder = key => {
+        const status = protectedConfig[key];
+        if (!status?.configured) return tr("secret_not_configured");
+        return tr("secret_configured_placeholder", { fingerprint: status.fingerprint });
+    };
     return (
         <>
             <Grid
@@ -1011,6 +1016,9 @@ const MemoDiscordSteamForm = memo(({ theme, formConfig }) => {
                     label={tr("discord_client_secret")}
                     variant="outlined"
                     fullWidth
+                    type="password"
+                    placeholder={secretPlaceholder("discord_client_secret")}
+                    slotProps={{ inputLabel: { shrink: true } }}
                     value={formConfig.state.discord_client_secret}
                     onChange={e => {
                         formConfig.setState({ ...formConfig.state, discord_client_secret: e.target.value });
@@ -1028,6 +1036,9 @@ const MemoDiscordSteamForm = memo(({ theme, formConfig }) => {
                     label={tr("discord_bot_token")}
                     variant="outlined"
                     fullWidth
+                    type="password"
+                    placeholder={secretPlaceholder("discord_bot_token")}
+                    slotProps={{ inputLabel: { shrink: true } }}
                     value={formConfig.state.discord_bot_token}
                     onChange={e => {
                         formConfig.setState({ ...formConfig.state, discord_bot_token: e.target.value });
@@ -1045,6 +1056,9 @@ const MemoDiscordSteamForm = memo(({ theme, formConfig }) => {
                     label={tr("steam_api_key")}
                     variant="outlined"
                     fullWidth
+                    type="password"
+                    placeholder={secretPlaceholder("steam_api_key")}
+                    slotProps={{ inputLabel: { shrink: true } }}
                     value={formConfig.state.steam_api_key}
                     onChange={e => {
                         formConfig.setState({ ...formConfig.state, steam_api_key: e.target.value });
@@ -4577,6 +4591,7 @@ const Configuration = () => {
     }, [apiPath, webConfig, webAssets]);
 
     const [apiConfig, setApiConfig] = useState(null);
+    const [protectedConfig, setProtectedConfig] = useState({});
     const formConfig = Array.from({ length: Object.keys(CONFIG_SECTIONS).length }, () => {
         const [state, setState] = useState(null);
         return { state, setState };
@@ -4703,6 +4718,7 @@ const Configuration = () => {
                 _apiConfig.config.delivery_rules.required_realistic_settings = [];
             }
             setFormConfigOrg(_apiConfig.config);
+            setProtectedConfig(_apiConfig.protected_config || {});
             setApiConfig(JSON.stringify(_apiConfig.config, null, 4));
             setApiBackup(JSON.stringify(_apiConfig.backup, null, 4));
             setApiLastModify(_apiConfig.config_last_modified);
@@ -5194,7 +5210,7 @@ const Configuration = () => {
                                             {tr("config_discord_steam_api_note_2")}
                                         </Typography>
                                         <Grid container spacing={2} rowSpacing={-1} sx={{ mt: "5px" }}>
-                                            <MemoDiscordSteamForm theme={theme} formConfig={formConfig[4]} />
+                                            <MemoDiscordSteamForm theme={theme} formConfig={formConfig[4]} protectedConfig={protectedConfig} />
                                             <Grid size={12}>
                                                 <Grid container>
                                                     <Grid
