@@ -15,7 +15,9 @@ import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { customAxios as axios } from "../../functions";
 
 const HCAPTCHA_SITEKEY = import.meta.env.VITE_HCAPTCHA_SITEKEY;
-const CAPTCHA_ENABLED = import.meta.env.VITE_HUB_TEST_DISABLE_CAPTCHA !== "true";
+// Do not initialize hCaptcha unless a site key is configured. This also keeps
+// local/test deployments usable before CAPTCHA is enabled.
+const CAPTCHA_ENABLED = Boolean(HCAPTCHA_SITEKEY) && import.meta.env.VITE_HUB_TEST_DISABLE_CAPTCHA !== "true";
 
 const AuthLogin = () => {
     const { t: tr } = useTranslation();
