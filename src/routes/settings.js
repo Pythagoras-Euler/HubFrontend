@@ -31,7 +31,7 @@ const LANGUAGES = { "ar": "Arabic (العربية)", "be": "Belarusian (бела
 const RADIO_TYPES = { "tfm": "TruckersFM", "simhit": "SimulatorHits", "custom-pean": "[Custom] PeanFM" };
 const CUSTOM_RADIO_URL = { "custom-pean": "https://radio.plvtc.com/listen/peanfm/radio.mp3" };
 const settingsRoutes = ["/general", "/profile", "/appearance", "/security", "/sessions"];
-const TEST_PASSWORD_ONLY_AUTH = import.meta.env.VITE_HUB_TEST_PASSWORD_ONLY_AUTH === "true";
+const TEST_SECURITY_BYPASS = import.meta.env.VITE_HUB_TEST_BYPASS_SECURITY_CHECKS === "true" || import.meta.env.VITE_HUB_TEST_PASSWORD_ONLY_AUTH === "true";
 
 const DEFAULT_BGCOLOR = {
     light: {
@@ -167,7 +167,7 @@ const Settings = ({ defaultTab = 0 }) => {
     const [otpAction, setOtpAction] = useState("");
     const [otpPass, setOtpPass] = useState(0); // timestamp, before which user doesn't need to re-enter the otp
     const [requireOtp, setRequireOtp] = useState(false);
-    const [mfaEnabled, setMfaEnabled] = useState(curUser.mfa && !TEST_PASSWORD_ONLY_AUTH);
+    const [mfaEnabled, setMfaEnabled] = useState(curUser.mfa && !TEST_SECURITY_BYPASS);
     const handleOtp = useCallback(() => {
         if (otp.replaceAll(" ", "") === "" || isNaN(otp.replaceAll(" ", "")) || otp.length !== 6) {
             setSnackbarContent(tr("invalid_otp"));
@@ -2458,7 +2458,7 @@ const Settings = ({ defaultTab = 0 }) => {
                             </Grid>
                         </Grid>
                     </Grid>
-                    {!TEST_PASSWORD_ONLY_AUTH && (<Grid
+                    {!TEST_SECURITY_BYPASS && (<Grid
                         size={{
                             xs: 12,
                             sm: 12,
@@ -2519,7 +2519,7 @@ const Settings = ({ defaultTab = 0 }) => {
                             </Grid>
                         </Grid>
                     </Grid>)}
-                    {!TEST_PASSWORD_ONLY_AUTH && (<Grid
+                    <Grid
                         size={{
                             xs: 12,
                             sm: 12,
@@ -2578,7 +2578,7 @@ const Settings = ({ defaultTab = 0 }) => {
                                 )}
                             </Grid>
                         </Grid>
-                    </Grid>)}
+                    </Grid>
                     <Grid
                         size={{
                             xs: 12,
