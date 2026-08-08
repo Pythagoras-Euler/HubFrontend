@@ -24,6 +24,8 @@ import { getRolePerms, customAxios as axios, makeRequestsAuto, getAuthToken, DEF
 
 const LANGUAGES = { "ar": "Arabic (العربية)", "be": "Belarusian (беларуская)", "bg": "Bulgarian (български)", "cs": "Czech (čeština)", "cy": "Welsh (Cymraeg)", "da": "Danish (dansk)", "de": "German (Deutsch)", "el": "Greek (Ελληνικά)", "en": "English", "eo": "Esperanto", "es": "Spanish (Español)", "et": "Estonian (eesti keel)", "fi": "Finnish (suomi)", "fr": "French (français)", "ga": "Irish (Gaeilge)", "gd": "Scottish (Gàidhlig)", "hu": "Hungarian (magyar)", "hy": "Armenian (Հայերեն)", "id": "Indonesian (Bahasa Indonesia)", "is": "Icelandic (íslenska)", "it": "Italian (italiano)", "ja": "Japanese (日本語)", "ko": "Korean (한국어)", "lt": "Lithuanian (lietuvių kalba)", "lv": "Latvian (latviešu valoda)", "mk/sl": "Macedonian/Slovenian (македонски/​slovenščina)", "mn": "Mongolian (Монгол)", "mo": "Moldavian (Moldova)", "ne": "Nepali (नेपाली)", "nl": "Dutch (Nederlands)", "nn": "Norwegian (norsk nynorsk)", "pl": "Polish (polski)", "pt": "Portuguese (Português)", "ro": "Romanian (română)", "ru": "Russian (русский)", "sk": "Slovak (slovenčina)", "sl": "Slovenian (slovenščina)", "sq": "Albanian (Shqip)", "sr": "Serbian (српски)", "sv": "Swedish (Svenska)", "th": "Thai (ไทย)", "tr": "Turkish (Türkçe)", "uk": "Ukrainian (українська)", "vi": "Vietnamese (Tiếng Việt)", "yi": "Yiddish (ייִדיש)", "zh": "Chinese (中文)" };
 
+const TEST_PASSWORD_ONLY_AUTH = import.meta.env.VITE_HUB_TEST_PASSWORD_ONLY_AUTH === "true";
+
 const CONFIG_SECTIONS = {
     "general": ["name", "language", "distance_unit", "security_level", "privacy", "logo_url", "hex_color", "hook_audit_log", "banner_background_url", "banner_info_first_row", "banner_background_opacity"],
     "profile": ["sync_discord_email", "must_join_guild", "use_server_nickname", "allow_custom_profile", "use_custom_activity", "avatar_domain_whitelist", "required_connections", "register_methods"],
@@ -4640,7 +4642,7 @@ const Configuration = () => {
         window.loading -= 1;
     }, [apiPath, apiConfig]);
     const showReloadApiConfig = useCallback(async () => {
-        if (curUser.mfa === false) {
+        if (curUser.mfa === false && !TEST_PASSWORD_ONLY_AUTH) {
             setSnackbarContent(tr("rejected_you_must_enable_mfa_before_reloading_config"));
             setSnackbarSeverity("error");
             return;
@@ -4648,8 +4650,8 @@ const Configuration = () => {
         setReloadModalOpen(true);
     }, []);
     const reloadApiConfig = useCallback(async () => {
-        let otp = mfaOtp.replace(" ", "");
-        if (isNaN(otp) || otp.length !== 6) {
+        let otp = TEST_PASSWORD_ONLY_AUTH ? "" : mfaOtp.replace(" ", "");
+        if (!TEST_PASSWORD_ONLY_AUTH && (isNaN(otp) || otp.length !== 6)) {
             setSnackbarContent(tr("invalid_mfa_otp"));
             setSnackbarSeverity("error");
             return;
@@ -6237,8 +6239,8 @@ const Configuration = () => {
                     </Typography>
                 </DialogTitle>
                 <DialogContent>
-                    <Typography variant="body2">{tr("for_security_purposes_you_must")}</Typography>
-                    <TextField sx={{ mt: "15px" }} label={tr("mfa_otp")} value={mfaOtp} onChange={e => setMfaOtp(e.target.value)} fullWidth />
+                    {!TEST_PASSWORD_ONLY_AUTH && <Typography variant="body2">{tr("for_security_purposes_you_must")}</Typography>}
+                    {!TEST_PASSWORD_ONLY_AUTH && <TextField sx={{ mt: "15px" }} label={tr("mfa_otp")} value={mfaOtp} onChange={e => setMfaOtp(e.target.value)} fullWidth />}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseReloadModal} variant="contained" color="secondary" sx={{ ml: "auto" }}>

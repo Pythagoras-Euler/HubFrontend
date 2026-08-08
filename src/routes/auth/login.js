@@ -15,9 +15,10 @@ import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { customAxios as axios } from "../../functions";
 
 const HCAPTCHA_SITEKEY = import.meta.env.VITE_HCAPTCHA_SITEKEY;
+const TEST_PASSWORD_ONLY_AUTH = import.meta.env.VITE_HUB_TEST_PASSWORD_ONLY_AUTH === "true";
 // Do not initialize hCaptcha unless a site key is configured. This also keeps
 // local/test deployments usable before CAPTCHA is enabled.
-const CAPTCHA_ENABLED = Boolean(HCAPTCHA_SITEKEY) && import.meta.env.VITE_HUB_TEST_DISABLE_CAPTCHA !== "true";
+const CAPTCHA_ENABLED = Boolean(HCAPTCHA_SITEKEY) && !TEST_PASSWORD_ONLY_AUTH && import.meta.env.VITE_HUB_TEST_DISABLE_CAPTCHA !== "true";
 
 const AuthLogin = () => {
     const { t: tr } = useTranslation();
@@ -134,8 +135,8 @@ const AuthLogin = () => {
                             size={{
                                 xs: 12,
                                 sm: 12,
-                                md: 8,
-                                lg: 8,
+                                md: TEST_PASSWORD_ONLY_AUTH ? 12 : 8,
+                                lg: TEST_PASSWORD_ONLY_AUTH ? 12 : 8,
                             }}>
                             <Typography variant="h3" sx={{ fontWeight: 800 }}>
                                 {tr("welcome_back")}
@@ -215,7 +216,7 @@ const AuthLogin = () => {
                             </ButtonGroup>
                         </Grid>
 
-                        <Grid
+                        {!TEST_PASSWORD_ONLY_AUTH && <Grid
                             size={{
                                 xs: 12,
                                 sm: 12,
@@ -249,7 +250,7 @@ const AuthLogin = () => {
                                     &nbsp;&nbsp;Steam
                                 </Button>
                             </ButtonGroup>
-                        </Grid>
+                        </Grid>}
                     </Grid>
                 </CardContent>
             </Card>
