@@ -91,9 +91,9 @@ const Deliveries = () => {
         }
         setDialogButtonDisabled(true);
         let resp = await axios({ url: `${apiPath}/trucky/import/${truckyJobID}?bypass_tracker_check=${bypassTrackerCheck}`, method: "POST", headers: { Authorization: `Bearer ${getAuthToken()}` } });
-        if (resp.status === 204) {
+        if (resp.status === 200 && resp.data.logid !== undefined) {
             setSnackbarContent(tr("job_imported"));
-            setSnackbarSeverity("error");
+            setSnackbarSeverity("success");
         } else {
             setSnackbarContent(resp.data.error);
             setSnackbarSeverity("error");
@@ -145,7 +145,7 @@ const Deliveries = () => {
             let st = +new Date();
             let jobID = resp.data.data[i].id;
             let dhresp = await axios({ url: `${apiPath}/trucky/import/${jobID}?bypass_tracker_check=${bypassTrackerCheck}`, method: "POST", headers: { Authorization: `Bearer ${getAuthToken()}` } });
-            if (dhresp.status === 204) {
+            if (dhresp.status === 200 && dhresp.data.logid !== undefined) {
                 setTruckyImportLog(`Imported Trucky job #${jobID}`);
                 setSnackbarSeverity("success");
                 successCnt += 1;
@@ -179,7 +179,7 @@ const Deliveries = () => {
                     let st = +new Date();
                     let jobID = resp.data.data[i].id;
                     let dhresp = await axios({ url: `${apiPath}/trucky/import/${jobID}?bypass_tracker_check=${bypassTrackerCheck}`, method: "POST", headers: { Authorization: `Bearer ${getAuthToken()}` } });
-                    if (dhresp.status === 204) {
+                    if (dhresp.status === 200 && dhresp.data.logid !== undefined) {
                         setTruckyImportLog(`Imported Trucky job #${jobID}`);
                         setSnackbarSeverity("success");
                         successCnt += 1;
