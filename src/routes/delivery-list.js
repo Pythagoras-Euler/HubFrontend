@@ -27,17 +27,18 @@ const Deliveries = () => {
     const theme = useTheme();
 
     const columns = [
-        { id: "display_logid", label: "ID", orderKey: "logid", defaultOrder: "desc" },
+        { id: "display_logid", label: "ID" },
         { id: "driver", label: tr("driver") },
         { id: "source", label: tr("source") },
         { id: "destination", label: tr("destination") },
         { id: "distance", label: tr("distance"), orderKey: "distance", defaultOrder: "desc" },
         { id: "cargo", label: tr("cargo") },
-        { id: "profit", label: tr("profit") },
-        { id: "time", label: tr("time") },
+        { id: "profit", label: tr("profit"), orderKey: "profit", defaultOrder: "desc" },
+        { id: "time", label: tr("time"), orderKey: "timestamp", defaultOrder: "desc" },
     ];
 
     const inited = useRef(false);
+    const listRequest = useRef(0);
 
     const [detailStats, setDetailStats] = useState(cache.delivery_list.detailStats);
     const [dlogList, setDlogList] = useState(cache.delivery_list.dlogList);
@@ -48,6 +49,23 @@ const Deliveries = () => {
     const [totalItems, setTotalItems] = useState(cache.delivery_list.totalItems);
     const [tempListParam, setTempListParam] = useState(cache.delivery_list.listParam);
     const [listParam, setListParam] = useState(cache.delivery_list.listParam);
+    const [truckyDrivers, setTruckyDrivers] = useState([]);
+    const [truckySync, setTruckySync] = useState([]);
+    useEffect(() => {
+        let active = true;
+        async function loadTrucky() {
+            const params = new URLSearchParams(removeNUEValues({ after: listParam.after, before: listParam.before }));
+            const [drivers] = await makeRequestsAuto([{ url: `${apiPath}/trucky/drivers?${params}`, auth: "prefer" }]);
+            if (active && Array.isArray(drivers?.list)) setTruckyDrivers(drivers.list);
+            if (checkUserPerm(curUserPerm, ["administrator", "import_dlogs"])) {
+                const [status] = await makeRequestsAuto([{ url: `${apiPath}/trucky/sync-status`, auth: true }]);
+                if (active && Array.isArray(status?.companies)) setTruckySync(status.companies);
+            }
+        }
+        loadTrucky();
+        const timer = setInterval(loadTrucky, 60000);
+        return () => { active = false; clearInterval(timer); };
+    }, [apiPath, listParam.after, listParam.before, curUserPerm]);
 
     useEffect(() => {
         return () => {
@@ -61,6 +79,7 @@ const Deliveries = () => {
         setSnackbarContent("");
     }, []);
 
+    const [publicIdQuery, setPublicIdQuery] = useState("");
     const [dialogOpen, setDialogOpen] = useState("");
     const [dialogButtonDisabled, setDialogButtonDisabled] = useState(false);
 
@@ -213,7 +232,9 @@ const Deliveries = () => {
 
             let [detailS, dlogL] = [{}, {}];
 
+            const requestId = ++listRequest.current;
             let processedParam = removeNUEValues(listParam);
+            delete processedParam.publicIdSortVersion;
 
             if (!inited.current) {
                 inited.current = true;
@@ -243,6 +264,7 @@ const Deliveries = () => {
 
             [dlogL] = await makeRequestsAuto([{ url: `${apiPath}/dlog/list?page=${page}&page_size=${pageSize}&${new URLSearchParams(processedParam).toString()}`, auth: "prefer" }]);
 
+            if (!Array.isArray(dlogL?.list)) { window.loading -= 1; return; }
             let newDlogList = [];
             for (let i = 0; i < dlogL.list.length; i++) {
                 let checkmark = <></>;
@@ -268,9 +290,10 @@ const Deliveries = () => {
                 }
                 newDlogList.push({
                     logid: dlogL.list[i].logid,
+                    public_id: dlogL.list[i].public_id,
                     display_logid: (
                         <Typography variant="body2" sx={{ flexGrow: 1, display: "flex", alignItems: "center" }}>
-                            <span>{dlogL.list[i].logid}</span>
+                            <span>{dlogL.list[i].public_id || dlogL.list[i].logid}</span>
                             {checkmark}
                         </Typography>
                     ),
@@ -284,7 +307,7 @@ const Deliveries = () => {
                 });
             }
 
-            if (pageRef.current === page) {
+            if (pageRef.current === page && requestId === listRequest.current) {
                 setDlogList(newDlogList);
                 setTotalItems(dlogL.total_items);
             }
@@ -296,7 +319,7 @@ const Deliveries = () => {
 
     const navigate = useNavigate();
     function handleClick(data) {
-        navigate(`/delivery/${data.logid}`);
+        navigate(data.public_id ? `/delivery/public/${data.public_id}` : `/delivery/${data.logid}`);
     }
 
     function replaceUnderscores(str) {
@@ -308,6 +331,41 @@ const Deliveries = () => {
 
     return (
         <>
+            <Box component="form" sx={{ display: 'flex', gap: 1, mb: 2 }} onSubmit={e => {
+                e.preventDefault();
+                if (publicIdQuery.trim()) navigate(`/delivery/public/${encodeURIComponent(publicIdQuery.trim().toUpperCase())}`);
+            }}>
+                <TextField size="small" label="Public ID" value={publicIdQuery}
+                    onChange={e => setPublicIdQuery(e.target.value)} slotProps={{ htmlInput: { maxLength: 8 } }} />
+                <Button type="submit" variant="outlined">{tr("search")}</Button>
+                <Button onClick={() => setDialogOpen("settings")} variant="outlined">{tr("filter_sort")}</Button>
+            </Box>
+            {truckySync.some(s => s.status === "failed" || s.status === "partial") && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                    Trucky 历史对账尚未完成：{truckySync.filter(s => s.status === "failed" || s.status === "partial").map(s => s.last_error).join("；")}。系统每 15 分钟重试，以下仅显示已入库运单。
+                </Alert>
+            )}
+            {(truckyDrivers.length > 0 || listParam.steamid) && (
+                <Box sx={{ mb: 2 }}>
+                    <TextField select fullWidth label="Trucky 司机运单统计（按里程排序，含 ETS2 / ATS）"
+                        value={listParam.steamid || ""}
+                        onChange={e => {
+                            const next = { ...listParam, steamid: e.target.value || undefined, userid: undefined };
+                            setListParam(next); setTempListParam(next); setPage(1);
+                        }}>
+                        <MenuItem value="">全部司机 · {truckyDrivers.reduce((n, d) => n + d.jobs, 0)} 笔已入库运单</MenuItem>
+                        {listParam.steamid && !truckyDrivers.some(d => d.steamid === listParam.steamid) && (
+                            <MenuItem value={listParam.steamid}>该司机在当前日期范围内没有已入库运单</MenuItem>
+                        )}
+                        {truckyDrivers.map((d, i) => (
+                            <MenuItem key={d.steamid} value={d.steamid}>
+                                {i + 1}. {d.name} · ETS2 {d.ets2_jobs} / ATS {d.ats_jobs} · {Math.round(d.distance).toLocaleString()} km
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                    <Typography variant="caption" color="text.secondary">统计跟随日期范围；不同司机按 Steam ID 区分，包含未注册 Hub 的司机。</Typography>
+                </Box>
+            )}
             {detailStats.truck !== undefined && detailStats !== "loading" && (
                 <>
                     <Grid container spacing={2} sx={{ marginBottom: "15px" }}>
@@ -385,6 +443,7 @@ const Deliveries = () => {
                         orderBy={listParam.order_by}
                         onOrderingUpdate={(order_by, order) => {
                             setListParam({ ...listParam, order_by: order_by, order: order });
+                        setPage(1);
                             setTempListParam({ ...tempListParam, order_by: order_by, order: order });
                         }}
                         data={dlogList}
@@ -405,6 +464,7 @@ const Deliveries = () => {
                     orderBy={listParam.order_by}
                     onOrderingUpdate={(order_by, order) => {
                         setListParam({ ...listParam, order_by: order_by, order: order });
+                        setPage(1);
                         setTempListParam({ ...tempListParam, order_by: order_by, order: order });
                     }}
                     data={dlogList}
@@ -579,12 +639,19 @@ const Deliveries = () => {
                 </DialogTitle>
                 <DialogContent>
                     <Grid container spacing={2} sx={{ mt: "5px" }}>
+                        {[['source', tr('source')], ['destination', tr('destination')], ['cargo', tr('cargo')]].map(([key, label]) => (
+                            <Grid size={{ xs: 12, sm: 4 }} key={key}>
+                                <TextField label={label} value={tempListParam[key] || ''} fullWidth
+                                    slotProps={{ htmlInput: { maxLength: 128 } }}
+                                    onChange={e => setTempListParam({ ...tempListParam, [key]: e.target.value })} />
+                            </Grid>
+                        ))}
                         <Grid size={6}>
                             <UserSelect
                                 label={tr("user")}
                                 users={[{ ...Object.values(users).find(user => user.userid === tempListParam?.userid) }]}
                                 onUpdate={user => {
-                                    setTempListParam({ ...tempListParam, userid: user?.userid !== undefined ? user?.userid : null });
+                                    setTempListParam({ ...tempListParam, steamid: undefined, userid: user?.userid !== undefined ? user?.userid : null });
                                 }}
                                 isMulti={false}
                                 allowDeselect={true}
@@ -609,6 +676,8 @@ const Deliveries = () => {
                                     setTempListParam({ ...tempListParam, order_by: e.target.value });
                                 }}
                                 fullWidth>
+                                <MenuItem value="timestamp">{tr("time")}</MenuItem>
+                                <MenuItem value="profit">{tr("profit")}</MenuItem>
                                 <MenuItem value="logid">{tr("log_id")}</MenuItem>
                                 <MenuItem value="distance">{tr("distance")}</MenuItem>
                                 <MenuItem value="fuel">{tr("fuel")}</MenuItem>
@@ -693,6 +762,8 @@ const Deliveries = () => {
                             color="info"
                             onClick={() => {
                                 setListParam(tempListParam);
+                                setPage(1);
+                                setDialogOpen("");
                             }}>
                             {tr("update")}
                         </Button>

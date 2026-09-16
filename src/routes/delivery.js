@@ -13,6 +13,7 @@ import { faStamp } from "@fortawesome/free-solid-svg-icons";
 
 import SimpleBar from "simplebar-react";
 
+import DeliveryVehicles, { vehicleName } from "../components/delivery-vehicles";
 import UserCard from "../components/usercard";
 import ListModal from "../components/listmodal";
 import TimeDelta from "../components/timedelta";
@@ -27,7 +28,7 @@ function bool2int(b) {
 
 const COUNTRY_FLAG = { uk: "🇬🇧", germany: "🇩🇪", france: "🇫🇷", netherlands: "🇳🇱", poland: "🇵🇱", norway: "🇳🇴", italy: "🇮🇹", lithuania: "🇱🇹", switzerland: "🇨🇭", sweden: "🇸🇪", czech: "🇨🇿", portugal: "🇵🇹", austria: "🇦🇹", denmark: "🇩🇰", finland: "🇫🇮", belgium: "🇧🇪", romania: "🇷🇴", russia: "🇷🇺", slovakia: "🇸🇰", turkey: "🇹🇷", hungary: "🇭🇺", bulgaria: "🇧🇬", latvia: "🇱🇻", estonia: "🇪🇪", ireland: "🇮🇪", croatia: "🇭🇷", greece: "🇬🇷", serbia: "🇷🇸", ukraine: "🇺🇦", slovenia: "🇸🇮", malta: "🇲🇹", andorra: "🇦🇩", macedonia: "🇲🇰", jordan: "🇯🇴", egypt: "🇪🇬", israel: "🇮🇱", montenegro: "🇲🇪", australia: "🇦🇺" };
 
-const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMeta, setDoReload, setDivisionStatus, setNewDivisionStatus, setDivisionMeta, setSelectedDivision, handleDivision, setDeleteOpen }) => {
+const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doReload, divisionMeta, setDoReload, setDivisionStatus, setNewDivisionStatus, setDivisionMeta, setSelectedDivision, handleDivision, setDeleteOpen }) => {
     const { t: tr } = useTranslation();
     const { apiPath, webConfig, curUID, curUser, curUserPerm, userSettings } = useContext(AppContext);
 
@@ -47,23 +48,13 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
         }
     }
     function GetTrailerModel(trailers) {
-        let trailerString = "";
-        for (let i = 0; i < trailers.length; i++) {
-            const trailer = trailers[i];
-            if (trailer.brand === null && (trailer.name === null || trailer.name === "")) trailerString += tr("unknown");
-            else if (trailer.brand === null && trailer.name !== null && trailer.name !== "") trailerString += trailer.name;
-            else trailerString += `${trailer.brand.name} ${trailer.name}`;
-            if (i < trailers.length - 1) {
-                trailerString += " - ";
-            }
-        }
-        return trailerString;
+        return (trailers || []).map(trailer => vehicleName(trailer, tr("unknown"))).join(" / ") || tr("unknown");
     }
     function GetTrailerPlate(game, trailers) {
         let trailerString = "";
-        for (let i = 0; i < trailers.length; i++) {
+        for (let i = 0; i < (trailers || []).length; i++) {
             const trailer = trailers[i];
-            trailerString += `${GetCountryFlag(game, trailer.license_plate_country.unique_id)} ${trailer.license_plate}`;
+            trailerString += `${GetCountryFlag(game, trailer?.license_plate_country?.unique_id)} ${trailer.license_plate}`;
             if (i < trailers.length - 1) {
                 trailerString += " - ";
             }
@@ -71,7 +62,7 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
         return trailerString;
     }
 
-    const { logid } = useParams();
+    const { logid, publicId } = useParams();
     const [dlog, setDlog] = useState({});
     const [dlogDetail, setDlogDetail] = useState({});
     const [dlogRoute, setDlogRoute] = useState([]);
@@ -80,7 +71,7 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
 
     if (window.isElectron) {
         window.electron.ipcRenderer.send("presence-update", {
-            details: `Viewing Delivery #${logid}`,
+            details: `Viewing Delivery #${dlog.public_id || publicId || logid}`,
             largeImageKey: `${apiPath}/client/assets/logo?key=${webConfig.logo_key !== undefined ? webConfig.logo_key : ""}`,
             largeImageText: webConfig.name,
             smallImageKey: `https://drivershub.charlws.com/images/logo.png`,
@@ -113,12 +104,12 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
     const handleReloadRoute = useCallback(async () => {
         window.loading += 1;
 
-        await axios({ url: `${apiPath}/tracksim/update/route`, data: { logid: logid }, method: "POST", headers: { Authorization: `Bearer ${getAuthToken()}` } });
+        await axios({ url: `${apiPath}/tracksim/update/route`, data: { logid: dlog.logid }, method: "POST", headers: { Authorization: `Bearer ${getAuthToken()}` } });
 
         window.loading -= 1;
 
         setDoReload(+new Date());
-    }, [apiPath, logid, setDoReload]);
+    }, [apiPath, dlog.logid, setDoReload]);
 
     useEffect(() => {
         async function doLoad() {
@@ -129,16 +120,18 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
                 return; // dependency change would trigger reload
             }
 
-            let [dlogD] = await makeRequestsAuto([{ url: `${apiPath}/dlog/${logid}`, auth: "prefer" }]);
+            let [dlogD] = await makeRequestsAuto([{ url: `${apiPath}/dlog/${publicId ? `public/${publicId}` : logid}`, auth: "prefer" }]);
             if (dlogD.error !== undefined) {
                 navigate(`/delivery`);
+                return;
             }
             setDlog(dlogD);
+            setInternalLogid(dlogD.logid);
             setDlogDetail(dlogD.detail.data.object);
 
             let divisionM = { error: "404" };
             if (dlogD.division !== null) {
-                [divisionM] = await makeRequestsAuto([{ url: `${apiPath}/dlog/${logid}/division`, auth: true }]);
+                [divisionM] = await makeRequestsAuto([{ url: `${apiPath}/dlog/${dlogD.logid}/division`, auth: true }]);
             } else {
                 // clear data
                 setDivisionStatus(-1);
@@ -316,7 +309,7 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
             }
 
             const lmi = [
-                { name: tr("log_id"), value: logid },
+                { name: tr("log_id"), value: dlogD.public_id || logid },
                 { name: `Tracker`, value: TRACKER[data.tracker] },
                 { name: `Tracker Job ID`, key: "id" },
                 { name: tr("time_submitted"), value: <TimeDelta key={`${+new Date()}`} timestamp={data.timestamp * 1000} /> },
@@ -345,21 +338,21 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
                     name: tr("truck_model"),
                     value: (
                         <>
-                            {detail.truck.brand.name}&nbsp;{detail.truck.name} <span style={{ color: "grey" }}>({detail.truck.unique_id})</span>
+                            {vehicleName(detail.truck, tr("unknown"))} <span style={{ color: "grey" }}>({detail.truck?.unique_id})</span>
                         </>
                     ),
                 },
-                { name: tr("truck_plate"), value: <>{detail.truck.license_plate_country !== null ? `${GetCountryFlag(detail.game.short_name, detail.truck.license_plate_country.unique_id)} ${detail.truck.license_plate}` : `N/A`}</> },
+                { name: tr("truck_plate"), value: <>{detail.truck?.license_plate_country != null ? `${GetCountryFlag(detail.game.short_name, detail.truck.license_plate_country.unique_id)} ${detail.truck.license_plate}` : `N/A`}</> },
                 {
                     name: tr("truck_odometer"),
                     value: (
                         <>
-                            {ConvertUnit(userSettings.unit, "km", detail.truck.initial_odometer)} {"->"} {ConvertUnit(userSettings.unit, "km", detail.truck.odometer)}
+                            {ConvertUnit(userSettings.unit, "km", detail.truck?.initial_odometer)} {"->"} {ConvertUnit(userSettings.unit, "km", detail.truck?.odometer)}
                         </>
                     ),
                 },
                 { name: tr("trailer_model"), value: GetTrailerModel(detail.trailers) },
-                { name: tr("trailer_plate"), value: <>{detail.trailers[0].license_plate_country !== null ? `${GetTrailerPlate(detail.game.short_name, detail.trailers)}` : `N/A`}</> },
+                { name: tr("trailer_plate"), value: <>{detail.trailers?.[0]?.license_plate_country != null ? `${GetTrailerPlate(detail.game.short_name, detail.trailers)}` : `N/A`}</> },
                 {},
                 {
                     name: tr("cargo"),
@@ -411,8 +404,8 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
                 { name: tr("fuel_used"), value: ConvertUnit(userSettings.unit, "l", detail.fuel_used, 2) },
                 { name: tr("avg_fuel"), value: ConvertUnit(userSettings.unit, "l", ((detail.fuel_used / detail.driven_distance) * 100).toFixed(2), 2) + "/100km" },
                 { name: tr("adblue_used"), value: ConvertUnit(userSettings.unit, "l", detail.adblue_used, 2) },
-                { name: tr("max_speed"), value: ConvertUnit(userSettings.unit, "km", detail.truck.top_speed * 3.6) + "/h" },
-                { name: tr("avg_speed"), value: ConvertUnit(userSettings.unit, "km", detail.truck.average_speed * 3.6) + "/h" },
+                { name: tr("max_speed"), value: ConvertUnit(userSettings.unit, "km", detail.truck?.top_speed * 3.6) + "/h" },
+                { name: tr("avg_speed"), value: ConvertUnit(userSettings.unit, "km", detail.truck?.average_speed * 3.6) + "/h" },
                 {},
                 { name: tr("revenue"), value: detail.events[detail.events.length - 1].meta.revenue !== undefined ? CURRENTY_ICON[detail.game.short_name] + detail.events[detail.events.length - 1].meta.revenue : "/" },
                 { name: tr("fine"), value: CURRENTY_ICON[detail.game.short_name] + fine },
@@ -437,7 +430,7 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
 
             if (window.isElectron) {
                 window.electron.ipcRenderer.send("presence-update", {
-                    details: `Viewing Delivery #${logid}`,
+                    details: `Viewing Delivery #${dlogD.public_id || publicId || logid}`,
                     state: `${detail.source_city.name} -> ${detail.destination_city.name} (${ConvertUnit(userSettings.unit, "km", detail.events[detail.events.length - 1].meta.distance)})`,
                     largeImageKey: `${apiPath}/client/assets/logo?key=${webConfig.logo_key !== undefined ? webConfig.logo_key : ""}`,
                     largeImageText: webConfig.name,
@@ -452,7 +445,7 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
             }
         }
         doLoad();
-    }, [apiPath, logid, theme, doReload, divisions]);
+    }, [apiPath, logid, publicId, theme, doReload, divisions, setInternalLogid]);
 
     return (
         <>
@@ -460,7 +453,7 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <Typography variant="h5" sx={{ flexGrow: 1, display: "flex", alignItems: "center" }}>
                         <LocalShippingRounded sx={{ mt: "3px" }} />
-                        &nbsp;&nbsp;<>{tr("delivery")}</> #{logid}
+                        &nbsp;&nbsp;<>{tr("delivery")}</> #{dlog.public_id || publicId || logid}
                     </Typography>
                 </div>
             )}
@@ -469,7 +462,7 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <Typography variant="h5" sx={{ flexGrow: 1, display: "flex", alignItems: "center" }}>
                             <LocalShippingRounded sx={{ mt: "3px" }} />
-                            &nbsp;&nbsp;<>{tr("delivery")}</> #{logid}&nbsp;
+                            &nbsp;&nbsp;<>{tr("delivery")}</> #{dlog.public_id || publicId || logid}&nbsp;
                             {divisionMeta !== null && divisionMeta.status !== undefined && divisionMeta.status !== 2 ? (
                                 <Tooltip placement="top" arrow title={divisionMeta.status === 1 ? tr("validated_division_delivery") : tr("pending_division_delivery")} PopperProps={{ modifiers: [{ name: "offset", options: { offset: [0, -10] } }] }}>
                                     <VerifiedOutlined sx={{ color: divisionMeta.status === 1 ? theme.palette.info.main : theme.palette.grey[400], fontSize: "1.2em", mt: "3px" }} />
@@ -490,6 +483,7 @@ const DeliveryDetail = memo(({ divisions, userDivisionIDs, doReload, divisionMet
                             <UserCard user={dlog.user} inline={true} />
                         </Typography>
                     </div>
+                    <DeliveryVehicles detail={dlogDetail} tr={tr} />
                     <div style={{ marginTop: "10px" }}>
                         <Grid container spacing={2}>
                             <Grid
@@ -754,7 +748,11 @@ const Delivery = memo(() => {
         setSnackbarContent("");
     }, []);
 
-    const { logid } = useParams();
+    const { logid: routeLogid, publicId: routePublicId } = useParams();
+    const routeKey = routePublicId || routeLogid;
+    const [resolvedDelivery, setResolvedDelivery] = useState(null);
+    const setInternalLogid = useCallback(id => setResolvedDelivery({ key: routeKey, id }), [routeKey]);
+    const logid = resolvedDelivery?.key === routeKey ? resolvedDelivery.id : routeLogid;
     const [doReload, setDoReload] = useState(0);
 
     const [divisionStatus, setDivisionStatus] = useState(-1);
@@ -776,6 +774,7 @@ const Delivery = memo(() => {
         setSelectedDivision(event.target.value);
     };
     const handleRDVSubmit = useCallback(async () => {
+        if (logid === undefined) return;
         window.loading += 1;
 
         let resp = await axios({ url: `${apiPath}/dlog/${logid}/division/${selectedDivision}`, method: "POST", headers: { Authorization: `Bearer ${getAuthToken()}` } });
@@ -792,6 +791,7 @@ const Delivery = memo(() => {
         setDoReload(+new Date());
     }, [apiPath, logid, selectedDivision]);
     const handleDVUpdate = useCallback(async () => {
+        if (logid === undefined) return;
         window.loading += 1;
 
         let resp = await axios({ url: `${apiPath}/dlog/${logid}/division/${selectedDivision}`, data: { status: newDivisionStatus, message: newDivisionMessage }, method: "PATCH", headers: { Authorization: `Bearer ${getAuthToken()}` } });
@@ -813,6 +813,7 @@ const Delivery = memo(() => {
         setDeleteOpen(false);
     }
     const handleDelete = useCallback(async () => {
+        if (logid === undefined) return;
         window.loading += 1;
 
         let resp = await axios({ url: `${apiPath}/dlog/${logid}`, method: "DELETE", headers: { Authorization: `Bearer ${getAuthToken()}` } });
@@ -831,7 +832,7 @@ const Delivery = memo(() => {
 
     return (
         <>
-            <DeliveryDetail divisions={divisions} userDivisionIDs={userDivisionIDs} doReload={doReload} divisionMeta={divisionMeta} setDoReload={setDoReload} setDivisionStatus={setDivisionStatus} setNewDivisionStatus={setNewDivisionStatus} setDivisionMeta={setDivisionMeta} setSelectedDivision={setSelectedDivision} handleDivision={handleDivision} setDeleteOpen={setDeleteOpen} />
+            <DeliveryDetail key={routePublicId || routeLogid} setInternalLogid={setInternalLogid} divisions={divisions} userDivisionIDs={userDivisionIDs} doReload={doReload} divisionMeta={divisionMeta} setDoReload={setDoReload} setDivisionStatus={setDivisionStatus} setNewDivisionStatus={setNewDivisionStatus} setDivisionMeta={setDivisionMeta} setSelectedDivision={setSelectedDivision} handleDivision={handleDivision} setDeleteOpen={setDeleteOpen} />
             {divisionMeta !== null && (
                 <Dialog open={divisionModalOpen} onClose={handleCloseDivisionModal}>
                     <DialogTitle>

@@ -366,6 +366,7 @@ function App() {
                                         <Route path="/task" element={<Task />}></Route>
                                         <Route path="/map" element={<Map />}></Route>
                                         <Route path="/delivery" element={<Deliveries />}></Route>
+                                        <Route path="/delivery/public/:publicId" element={<Delivery />} />
                                         <Route path="/delivery/:logid" element={<Delivery />} />
                                         <Route path="/challenge" element={<Challenges />}></Route>
                                         <Route path="/division" element={<Divisions />}></Route>

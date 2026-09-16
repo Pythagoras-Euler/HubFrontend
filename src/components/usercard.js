@@ -297,9 +297,10 @@ const UserCard = props => {
       }
       newDlogList.push({
         logid: _dlogList.list[i].logid,
+        public_id: _dlogList.list[i].public_id,
         display_logid: (
           <Typography variant="body2" sx={{ flexGrow: 1, display: "flex", alignItems: "center" }}>
-            <span>{_dlogList.list[i].logid}</span>
+            <span>{_dlogList.list[i].public_id || _dlogList.list[i].logid}</span>
             {checkmark}
           </Typography>
         ),
@@ -1425,7 +1426,7 @@ const UserCard = props => {
                     onPageChange={setDlogPage}
                     onRowsPerPageChange={setDlogPageSize}
                     onRowClick={data => {
-                      navigate(`/delivery/${data.logid}`);
+                      navigate(data.public_id ? `/delivery/public/${data.public_id}` : `/delivery/${data.logid}`);
                     }}
                   />
                 )}

@@ -459,7 +459,7 @@ const DEFAULT_CACHE = {
         page: 1,
         pageSize: null,
         totalItems: 1,
-        listParam: { order_by: "logid", order: "desc", after: undefined, before: undefined, game: 0, status: 0, userid: null },
+        listParam: { order_by: "timestamp", order: "desc", after: undefined, before: undefined, game: 0, status: 0, userid: null },
     },
     division: {
         dlog: {
@@ -579,6 +579,12 @@ export const CacheContextProvider = ({ children }) => {
         const initialListParamCache = readLS("cache-list-param", window.dhhost) || {};
 
         // Overwrite the default cache's listParams with the values from localStorage
+        const deliveryParams = initialListParamCache["delivery_list.listParam"];
+        if (deliveryParams && !deliveryParams.publicIdSortVersion) {
+            deliveryParams.order_by = "timestamp";
+            deliveryParams.order = "desc";
+            deliveryParams.publicIdSortVersion = 1;
+        }
         Object.keys(initialListParamCache).forEach(path => {
             setCache(prevCache => _.set({ ...prevCache }, path, initialListParamCache[path]));
         });
