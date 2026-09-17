@@ -9,7 +9,7 @@ describe("delivery details with incomplete tracker data", () => {
     it("does not turn missing, empty, nonnumeric or infinite fine speeds into NaN or zero", () => {
         for (const value of [undefined, null, "", " ", "bad", Infinity, -1]) {
             const html = renderToStaticMarkup(<SpeedDetails meta={{ speed: value, speed_limit: value }} tr={tr} convert={convert} />);
-            expect(html).toContain("not_provided");
+            expect(html).toContain("-*-*-");
             expect(html).not.toMatch(/NaN|Infinity|0km|undefined/);
         }
     });
@@ -22,8 +22,8 @@ describe("delivery details with incomplete tracker data", () => {
     it("keeps supplied depot names/IDs and labels unnamed special transport depots", () => {
         expect(companyLabel({ name: " Depot A ", unique_id: "depot_a" }, true, tr)).toBe("Depot A");
         expect(companyLabel({ name: "", unique_id: "depot_a" }, true, tr)).toBe("depot_a");
-        expect(companyLabel({ name: "", unique_id: "" }, true, tr)).toBe("special_depot_not_provided");
-        expect(companyLabel(null, false, tr)).toBe("depot_not_provided");
+        expect(companyLabel({ name: "", unique_id: "" }, true, tr)).toBe("-*-*-");
+        expect(companyLabel(null, false, tr)).toBe("-*-*-");
     });
     it("renders both times and uses the offset at the delivery date, including daylight saving", () => {
         const winter = formatDeliveryTime("2025-12-01T12:00:00Z", "Europe/London", "en-GB", "missing");

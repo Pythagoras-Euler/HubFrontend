@@ -407,13 +407,15 @@ const UserCard = props => {
   // profile customization
   const [specialColor, setSpecialColor] = useState(null);
   const [profileBackground, setProfilebackground] = useState([darkenColor(PROFILE_COLOR[theme.mode].paper, 0.5), darkenColor(PROFILE_COLOR[theme.mode].paper, 0.5)]);
-  const [profileBannerURL, setProfileBannerURL] = useState(`${apiPath}/member/banner?userid=${user.userid}`);
+  const [bannerLanguage, setBannerLanguage] = useState(userSettings.language?.startsWith("zh") ? "zh" : "en");
+  const [profileBannerURL, setProfileBannerURL] = useState(`${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`);
+  useEffect(() => { setProfileBannerURL(`${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`); }, [apiPath, user.userid, bannerLanguage]);
   useEffect(() => {
     // reset those stuff, which would be corrected in the code below
     // this is needed in case the old component is reused unexpectedly
     setSpecialColor(null);
     setProfilebackground([darkenColor(PROFILE_COLOR[theme.mode].paper, 0.5), darkenColor(PROFILE_COLOR[theme.mode].paper, 0.5)]);
-    setProfileBannerURL(`${apiPath}/member/banner?userid=${user.userid}`);
+    setProfileBannerURL(`${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`);
 
     if (user.discordid === undefined) return;
 
@@ -801,21 +803,24 @@ const UserCard = props => {
       fullWidth>
       <Card sx={{ padding: "5px", backgroundImage: `linear-gradient(${profileBackground[0]}, ${profileBackground[1]})` }}>
         {!userSettings.data_saver && !isNaN(user.userid) && (
-          <CardMedia
+          <>
+<ButtonGroup size="small" aria-label="Banner language"><Button onClick={() => setBannerLanguage("zh")} variant={bannerLanguage === "zh" ? "contained" : "outlined"}>中文</Button><Button onClick={() => setBannerLanguage("en")} variant={bannerLanguage === "en" ? "contained" : "outlined"}>English</Button></ButtonGroup>
+<CardMedia
             ref={modalBannerRef}
             component="img"
             image={profileBannerURL}
             onError={event => {
-              if (event.target.src !== `${apiPath}/member/banner?userid=${user.userid}`) event.target.src = `${apiPath}/member/banner?userid=${user.userid}`;
+              if (event.target.src !== `${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`) event.target.src = `${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`;
             }}
             onClick={() => {
-              navigator.clipboard.writeText(`${apiPath}/member/banner?userid=${user.userid}`);
+              navigator.clipboard.writeText(`${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`);
               setSnackbarContent("Banner URL copied to clipboard!");
               setSnackbarSeverity("success");
             }}
             alt=""
             sx={{ borderRadius: "5px 5px 0 0", cursor: "pointer" }}
           />
+</>
         )}
         <CardContent sx={{ padding: "10px", backgroundImage: `linear-gradient(${PROFILE_COLOR[theme.mode].paper}A0, ${PROFILE_COLOR[theme.mode].paper}E0)`, borderRadius: "0 0 5px 5px" }}>
           <CardContent sx={{ padding: "10px", backgroundImage: `linear-gradient(${PROFILE_COLOR[theme.mode].paper}E0, ${PROFILE_COLOR[theme.mode].paper}E0)`, borderRadius: "5px" }}>
@@ -2641,21 +2646,24 @@ const UserCard = props => {
         }}>
         <Card sx={{ maxWidth: 340, minWidth: 340, padding: "5px", backgroundImage: `linear-gradient(${profileBackground[0]}, ${profileBackground[1]})` }}>
           {!userSettings.data_saver && !isNaN(user.userid) && (
-            <CardMedia
+            <>
+<ButtonGroup size="small" aria-label="Banner language"><Button onClick={() => setBannerLanguage("zh")} variant={bannerLanguage === "zh" ? "contained" : "outlined"}>中文</Button><Button onClick={() => setBannerLanguage("en")} variant={bannerLanguage === "en" ? "contained" : "outlined"}>English</Button></ButtonGroup>
+<CardMedia
               component="img"
               ref={popoverBannerRef}
               image={profileBannerURL}
               onError={event => {
-                if (event.target.src !== `${apiPath}/member/banner?userid=${user.userid}`) event.target.src = `${apiPath}/member/banner?userid=${user.userid}`;
+                if (event.target.src !== `${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`) event.target.src = `${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`;
               }}
               onClick={() => {
-                navigator.clipboard.writeText(`${apiPath}/member/banner?userid=${user.userid}`);
+                navigator.clipboard.writeText(`${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`);
                 setSnackbarContent("Banner URL copied to clipboard!");
                 setSnackbarSeverity("success");
               }}
               alt=""
               sx={{ borderRadius: "5px 5px 0 0", cursor: "pointer" }}
             />
+</>
           )}
           <CardContent sx={{ padding: "10px", backgroundImage: `linear-gradient(${PROFILE_COLOR[theme.mode].paper}A0, ${PROFILE_COLOR[theme.mode].paper}E0)`, borderRadius: "0 0 5px 5px" }}>
             <CardContent sx={{ padding: "10px", backgroundImage: `linear-gradient(${PROFILE_COLOR[theme.mode].paper}E0, ${PROFILE_COLOR[theme.mode].paper}E0)`, borderRadius: "5px" }}>

@@ -10,6 +10,7 @@ import Portal from "@mui/material/Portal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileExport, faGears, faStamp, faTowerObservation, faTruckFront } from "@fortawesome/free-solid-svg-icons";
 
+import ActiveDeliveries from "../components/active-deliveries";
 import DateTimeField from "../components/datetime";
 import Podium from "../components/podium";
 import CustomTable from "../components/table";
@@ -331,6 +332,7 @@ const Deliveries = () => {
 
     return (
         <>
+            <ActiveDeliveries />
             <Box component="form" sx={{ display: 'flex', gap: 1, mb: 2 }} onSubmit={e => {
                 e.preventDefault();
                 if (publicIdQuery.trim()) navigate(`/delivery/public/${encodeURIComponent(publicIdQuery.trim().toUpperCase())}`);
@@ -363,7 +365,7 @@ const Deliveries = () => {
                             </MenuItem>
                         ))}
                     </TextField>
-                    <Typography variant="caption" color="text.secondary">统计跟随日期范围；不同司机按 Steam ID 区分，包含未注册 Hub 的司机。</Typography>
+
                 </Box>
             )}
             {detailStats.truck !== undefined && detailStats !== "loading" && (

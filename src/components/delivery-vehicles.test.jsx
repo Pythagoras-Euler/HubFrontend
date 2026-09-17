@@ -18,9 +18,11 @@ describe("delivery vehicles", () => {
     it("renders safely for empty, null and partially missing historical vehicles", () => {
         for (const detail of [{}, { truck: null, trailers: null }, { truck: { name: "Scania" }, trailers: [null, {}] }]) {
             const html = renderToStaticMarkup(<DeliveryVehicles detail={detail} tr={key => key} />);
-            expect(html).toContain("unknown");
+            expect(html).toContain("-*-*-");
             expect(html).not.toContain("undefined");
         }
         expect(vehicleName({ name: "Scania" }, "unknown")).toBe("Scania");
+        expect(vehicleName({ name: "", unique_id: "krone.dryliner", body_type: "dryvan" }, "-*-*-")).toBe("krone.dryliner");
+        expect(vehicleName({ name: null, body_type: "lowbed" }, "-*-*-")).toBe("lowbed");
     });
 });

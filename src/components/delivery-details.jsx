@@ -1,3 +1,5 @@
+export const UNKNOWN = "-*-*-";
+
 import { Typography } from "@mui/material";
 
 export function finiteNumber(value) {
@@ -9,7 +11,7 @@ export function finiteNumber(value) {
 export function companyLabel(company, special, tr) {
     const name = company?.name?.trim();
     const id = company?.unique_id?.trim();
-    return name || id || tr(special ? "special_depot_not_provided" : "depot_not_provided");
+    return name || id || UNKNOWN;
 }
 
 export function formatDeliveryTime(value, timeZone, locale, fallback) {
@@ -26,16 +28,16 @@ export function formatDeliveryTime(value, timeZone, locale, fallback) {
 
 export function DeliveryTimes({ detail, timeZone, locale, tr }) {
     return <Typography variant="body2" sx={{ mt: 1, textAlign: "center" }}>
-        {tr("transport_started_at")}: {formatDeliveryTime(detail?.start_time, timeZone, locale, tr("not_provided"))}
+        {tr("transport_started_at")}: {formatDeliveryTime(detail?.start_time, timeZone, locale, UNKNOWN)}
         <br />
-        {tr("transport_ended_at")}: {formatDeliveryTime(detail?.stop_time, timeZone, locale, tr("not_provided"))}
+        {tr("transport_ended_at")}: {formatDeliveryTime(detail?.stop_time, timeZone, locale, UNKNOWN)}
     </Typography>;
 }
 
 export function SpeedDetails({ meta = {}, unit, convert, tr, maximum = false }) {
     const speed = finiteNumber(maximum ? meta.max_speed : meta.speed);
     const limit = finiteNumber(meta.speed_limit);
-    const display = number => number !== null && number >= 0 ? `${convert(unit, "km", number * 3.6)}/h` : tr("not_provided");
+    const display = number => number !== null && number >= 0 ? `${convert(unit, "km", number * 3.6)}/h` : UNKNOWN;
     return <>
         {tr(maximum ? "max_speed" : "speed")}: {display(speed)}
         <br />

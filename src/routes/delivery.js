@@ -13,7 +13,7 @@ import { faStamp } from "@fortawesome/free-solid-svg-icons";
 
 import SimpleBar from "simplebar-react";
 
-import { companyLabel, formatDeliveryTime, DeliveryTimes, SpeedDetails, deliveryEventPositions, canReloadRoute } from "../components/delivery-details";
+import { UNKNOWN, finiteNumber, companyLabel, formatDeliveryTime, DeliveryTimes, SpeedDetails, deliveryEventPositions, canReloadRoute } from "../components/delivery-details";
 import DeliveryVehicles, { vehicleName } from "../components/delivery-vehicles";
 import UserCard from "../components/usercard";
 import ListModal from "../components/listmodal";
@@ -33,6 +33,8 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
     const { t: tr, i18n } = useTranslation();
     const { apiPath, webConfig, curUID, curUser, curUserPerm, userSettings } = useContext(AppContext);
 
+    const formatUnit = (unit, kind, value, ...args) => finiteNumber(value) === null ? UNKNOWN : ConvertUnit(unit, kind, value, ...args);
+
     const EVENT_ICON = { "job.started": <LocalShippingRounded />, "job.delivered": <FlagRounded />, "job.cancelled": <CloseRounded />, "fine": <GavelRounded />, "tollgate": <TollRounded />, "ferry": <DirectionsBoatRounded />, "train": <TrainRounded />, "collision": <CarCrashRounded />, "repair": <BuildRounded />, "refuel": <LocalGasStationRounded />, "teleport": <FlightTakeoffRounded />, "speeding": <SpeedRounded /> };
     const EVENT_COLOR = { "job.started": "lightgreen", "job.delivered": "lightgreen", "job.cancelled": "lightred", "fine": "orange", "tollgate": "lightblue", "ferry": "lightblue", "train": "lightblue", "collision": "orange", "repair": "lightblue", "refuel": "lightblue", "teleport": "lightblue", "speeding": "orange" };
     const EVENT_NAME = { "job.started": tr("job_started"), "job.delivered": tr("job_delivered"), "job.cancelled": tr("job_cancelled"), "fine": tr("fine"), "tollgate": tr("toll_gate"), "ferry": tr("ferry"), "train": tr("train"), "collision": tr("collision"), "repair": tr("repair"), "refuel": tr("refuel"), "teleport": tr("teleport"), "speeding": tr("speeding") };
@@ -49,13 +51,13 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
         }
     }
     function GetTrailerModel(trailers) {
-        return (trailers || []).map(trailer => vehicleName(trailer, tr("unknown"))).join(" / ") || tr("unknown");
+        return (trailers || []).map(trailer => vehicleName(trailer, UNKNOWN)).join(" / ") || UNKNOWN;
     }
     function GetTrailerPlate(game, trailers) {
         let trailerString = "";
         for (let i = 0; i < (trailers || []).length; i++) {
             const trailer = trailers[i];
-            trailerString += `${GetCountryFlag(game, trailer?.license_plate_country?.unique_id)} ${trailer.license_plate}`;
+            trailerString += `${GetCountryFlag(game, trailer?.license_plate_country?.unique_id)} ${trailer?.license_plate || UNKNOWN}`;
             if (i < trailers.length - 1) {
                 trailerString += " - ";
             }
@@ -320,8 +322,8 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                 { name: `Tracker Job ID`, key: "id" },
                 { name: tr("time_submitted"), value: <TimeDelta key={`${+new Date()}`} timestamp={data.timestamp * 1000} /> },
                 { name: tr("time_spent"), value: CalcInterval(new Date(detail.start_time), new Date(detail.stop_time)) },
-                { name: tr("transport_started_at"), value: formatDeliveryTime(detail.start_time, userSettings.display_timezone, i18n.language, tr("not_provided")) },
-                { name: tr("transport_ended_at"), value: formatDeliveryTime(detail.stop_time, userSettings.display_timezone, i18n.language, tr("not_provided")) },
+                { name: tr("transport_started_at"), value: formatDeliveryTime(detail.start_time, userSettings.display_timezone, i18n.language, UNKNOWN) },
+                { name: tr("transport_ended_at"), value: formatDeliveryTime(detail.stop_time, userSettings.display_timezone, i18n.language, UNKNOWN) },
                 { name: tr("status"), value: data.detail.type === "job.delivered" ? <span style={{ color: theme.palette.success.main }}>{tr("delivered")}</span> : <span style={{ color: theme.palette.error.main }}>{tr("cancelled")}</span> },
                 {
                     name: tr("delivery_route"),
@@ -339,43 +341,43 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                             </Typography>
                         ),
                 },
-                { name: tr("division"), value: data.division !== null && divisions[data.division] !== undefined ? divisions[data.division].name : "/" },
+                { name: tr("division"), value: data.division !== null && divisions[data.division] !== undefined ? divisions[data.division].name : UNKNOWN },
                 {},
                 { name: tr("driver"), value: <UserCard user={data.user} inline={true} /> },
                 {
                     name: tr("truck_model"),
                     value: (
                         <>
-                            {vehicleName(detail.truck, tr("unknown"))} <span style={{ color: "grey" }}>({detail.truck?.unique_id})</span>
+                            {vehicleName(detail.truck, UNKNOWN)} <span style={{ color: "grey" }}>({detail.truck?.unique_id})</span>
                         </>
                     ),
                 },
-                { name: tr("truck_plate"), value: <>{detail.truck?.license_plate_country != null ? `${GetCountryFlag(detail.game.short_name, detail.truck.license_plate_country.unique_id)} ${detail.truck.license_plate}` : `N/A`}</> },
+                { name: tr("truck_plate"), value: <>{detail.truck?.license_plate_country != null ? `${GetCountryFlag(detail.game.short_name, detail.truck.license_plate_country.unique_id)} ${detail.truck.license_plate}` : UNKNOWN}</> },
                 {
                     name: tr("truck_odometer"),
                     value: (
                         <>
-                            {ConvertUnit(userSettings.unit, "km", detail.truck?.initial_odometer)} {"->"} {ConvertUnit(userSettings.unit, "km", detail.truck?.odometer)}
+                            {formatUnit(userSettings.unit, "km", detail.truck?.initial_odometer)} {"->"} {formatUnit(userSettings.unit, "km", detail.truck?.odometer)}
                         </>
                     ),
                 },
                 { name: tr("trailer_model"), value: GetTrailerModel(detail.trailers) },
-                { name: tr("trailer_plate"), value: <>{detail.trailers?.[0]?.license_plate_country != null ? `${GetTrailerPlate(detail.game.short_name, detail.trailers)}` : `N/A`}</> },
+                { name: tr("trailer_plate"), value: <>{detail.trailers?.[0]?.license_plate_country != null ? `${GetTrailerPlate(detail.game.short_name, detail.trailers)}` : UNKNOWN}</> },
                 {},
                 {
                     name: tr("cargo"),
                     value: (
                         <>
-                            {detail.cargo.name} <span style={{ color: "grey" }}>({detail.cargo.unique_id})</span>
+                            {detail.cargo.name || UNKNOWN} <span style={{ color: "grey" }}>({detail.cargo.unique_id})</span>
                         </>
                     ),
                 },
-                { name: tr("cargo_mass"), value: ConvertUnit(userSettings.unit, "kg", detail.cargo.mass) },
+                { name: tr("cargo_mass"), value: formatUnit(userSettings.unit, "kg", detail.cargo.mass) },
                 { name: tr("cargo_damage"), value: <span style={{ color: detail.cargo.damage <= 0.01 ? theme.palette.success.main : detail.cargo.damage <= 0.05 ? theme.palette.warning.main : theme.palette.error.main }}> {(detail.cargo.damage * 100).toFixed(1)}%</span> },
                 {},
-                { name: tr("planned_distance"), value: ConvertUnit(userSettings.unit, "km", detail.planned_distance) },
-                { name: tr("logged_distance"), value: ConvertUnit(userSettings.unit, "km", detail.driven_distance) },
-                { name: tr("reported_distance"), value: ConvertUnit(userSettings.unit, "km", detail.events[detail.events.length - 1].meta.distance) },
+                { name: tr("planned_distance"), value: formatUnit(userSettings.unit, "km", detail.planned_distance) },
+                { name: tr("logged_distance"), value: formatUnit(userSettings.unit, "km", detail.driven_distance) },
+                { name: tr("reported_distance"), value: formatUnit(userSettings.unit, "km", detail.events[detail.events.length - 1].meta.distance) },
                 {},
                 {
                     name: tr("source_company"),
@@ -389,7 +391,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                     name: tr("source_city"),
                     value: (
                         <>
-                            {detail.source_city.name} <span style={{ color: "grey" }}>({detail.source_city.unique_id})</span>
+                            {detail.source_city.name || UNKNOWN} <span style={{ color: "grey" }}>({detail.source_city.unique_id})</span>
                         </>
                     ),
                 },
@@ -405,17 +407,17 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                     name: tr("destination_city"),
                     value: (
                         <>
-                            {detail.destination_city.name} <span style={{ color: "grey" }}>({detail.destination_city.unique_id})</span>
+                            {detail.destination_city.name || UNKNOWN} <span style={{ color: "grey" }}>({detail.destination_city.unique_id})</span>
                         </>
                     ),
                 },
-                { name: tr("fuel_used"), value: ConvertUnit(userSettings.unit, "l", detail.fuel_used, 2) },
-                { name: tr("avg_fuel"), value: ConvertUnit(userSettings.unit, "l", ((detail.fuel_used / detail.driven_distance) * 100).toFixed(2), 2) + "/100km" },
-                { name: tr("adblue_used"), value: ConvertUnit(userSettings.unit, "l", detail.adblue_used, 2) },
-                { name: tr("max_speed"), value: ConvertUnit(userSettings.unit, "km", detail.truck?.top_speed * 3.6) + "/h" },
-                { name: tr("avg_speed"), value: ConvertUnit(userSettings.unit, "km", detail.truck?.average_speed * 3.6) + "/h" },
+                { name: tr("fuel_used"), value: formatUnit(userSettings.unit, "l", detail.fuel_used, 2) },
+                { name: tr("avg_fuel"), value: formatUnit(userSettings.unit, "l", finiteNumber(detail.fuel_used) === null || !(finiteNumber(detail.driven_distance) > 0) ? null : ((detail.fuel_used / detail.driven_distance) * 100).toFixed(2), 2) + (finiteNumber(detail.fuel_used) === null || !(finiteNumber(detail.driven_distance) > 0) ? "" : "/100km") },
+                { name: tr("adblue_used"), value: formatUnit(userSettings.unit, "l", detail.adblue_used, 2) },
+                { name: tr("max_speed"), value: formatUnit(userSettings.unit, "km", finiteNumber(detail.truck?.top_speed) === null ? null : detail.truck.top_speed * 3.6) + (finiteNumber(detail.truck?.top_speed) === null ? "" : "/h") },
+                { name: tr("avg_speed"), value: formatUnit(userSettings.unit, "km", finiteNumber(detail.truck?.average_speed) === null ? null : detail.truck.average_speed * 3.6) + (finiteNumber(detail.truck?.average_speed) === null ? "" : "/h") },
                 {},
-                { name: tr("revenue"), value: detail.events[detail.events.length - 1].meta.revenue !== undefined ? CURRENTY_ICON[detail.game.short_name] + detail.events[detail.events.length - 1].meta.revenue : "/" },
+                { name: tr("revenue"), value: detail.events[detail.events.length - 1].meta.revenue !== undefined ? CURRENTY_ICON[detail.game.short_name] + detail.events[detail.events.length - 1].meta.revenue : UNKNOWN },
                 { name: tr("fine"), value: CURRENTY_ICON[detail.game.short_name] + fine },
                 {},
                 { name: tr("is_special_transport"), value: YES_NO[bool2int(detail.is_special)] },
@@ -439,7 +441,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
             if (window.isElectron) {
                 window.electron.ipcRenderer.send("presence-update", {
                     details: `Viewing Delivery #${dlogD.public_id || publicId || logid}`,
-                    state: `${detail.source_city.name} -> ${detail.destination_city.name} (${ConvertUnit(userSettings.unit, "km", detail.events[detail.events.length - 1].meta.distance)})`,
+                    state: `${detail.source_city.name || UNKNOWN} -> ${detail.destination_city.name || UNKNOWN} (${formatUnit(userSettings.unit, "km", detail.events[detail.events.length - 1].meta.distance)})`,
                     largeImageKey: `${apiPath}/client/assets/logo?key=${webConfig.logo_key !== undefined ? webConfig.logo_key : ""}`,
                     largeImageText: webConfig.name,
                     smallImageKey: `https://drivershub.charlws.com/images/logo.png`,
@@ -508,7 +510,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                             <b>{companyLabel(dlogDetail.source_company, dlogDetail.is_special, tr)}</b>
                                         </Typography>
                                         <Typography variant="body2" color="textSecondary" component="div">
-                                            {dlogDetail.source_city.name}
+                                            {dlogDetail.source_city?.name || UNKNOWN}
                                         </Typography>
                                     </CardContent>
                                 </Card>
@@ -523,7 +525,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                 }}>
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
                                     <Typography variant="body1" component="div" sx={{ marginTop: "4px" }}>
-                                        {`${dlogDetail.cargo.name} (${ConvertUnit(userSettings.unit, "kg", dlogDetail.cargo.mass)})`}
+                                        {`${dlogDetail.cargo.name} (${formatUnit(userSettings.unit, "kg", dlogDetail.cargo.mass)})`}
                                     </Typography>
 
                                     <LinearProgress
@@ -538,7 +540,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                     />
 
                                     <Typography variant="body2" component="div" style={{ textAlign: "center" }}>
-                                        {ConvertUnit(userSettings.unit, "km", dlogDetail.driven_distance)}
+                                        {formatUnit(userSettings.unit, "km", dlogDetail.driven_distance)}
                                         <br />
                                         {CalcInterval(new Date(dlogDetail.start_time), new Date(dlogDetail.stop_time))}
                                     </Typography>
@@ -558,7 +560,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                             <b>{companyLabel(dlogDetail.destination_company, dlogDetail.is_special, tr)}</b>
                                         </Typography>
                                         <Typography variant="body2" color="textSecondary" component="div">
-                                            {dlogDetail.destination_city.name}
+                                            {dlogDetail.destination_city?.name || UNKNOWN}
                                         </Typography>
                                     </CardContent>
                                 </Card>
@@ -582,7 +584,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                             ) : (
                                                 <>
                                                     <span>{tr(dlog.tracker === "trucky" ? (eventPositions.length ? "delivery_event_positions" : "delivery_route_not_provided") : "delivery_route_not_available")}</span>
-                                                    {dlog.tracker === "trucky" && <><br />{tr("trucky_route_unavailable")}</>}
+
                                                     {canReloadRoute(dlog.tracker, dlog.telemetry) && (
                                                         <>
                                                             <br />
@@ -874,7 +876,7 @@ const Delivery = memo(() => {
                                 </Typography>
                                 <br />
                                 <Typography variant="body">
-                                    <>{tr("division")}</>: <b>{divisions[divisionMeta.divisionid] !== undefined ? divisions[divisionMeta.divisionid].name : "/"}</b>
+                                    <>{tr("division")}</>: <b>{divisions[divisionMeta.divisionid] !== undefined ? divisions[divisionMeta.divisionid].name : UNKNOWN}</b>
                                 </Typography>
                                 <br />
                                 <Typography variant="body">
