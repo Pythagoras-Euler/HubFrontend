@@ -18,11 +18,25 @@ const Overview = () => {
     const { t: tr } = useTranslation();
     const { apiPath, users, memberUIDs, curUID, userSettings } = useContext(AppContext);
     const { cache, setCache } = useContext(CacheContext);
-    const allMembers = memberUIDs.map(uid => users[uid]);
+    const allMembers = memberUIDs.map(uid => users[uid]).filter(Boolean);
 
     const { userid } = useParams(); // profile display handling
     let memberIdx = allMembers.findIndex(member => member.userid === parseInt(userid));
+    const [linkedProfile, setLinkedProfile] = useState(null);
+    const profileUser = memberIdx >= 0 ? allMembers[memberIdx] : linkedProfile?.userid === Number(userid) ? linkedProfile : null;
     const [showProfileModal, setShowProfileModal] = useState(memberIdx !== -1 ? 2 : 0);
+    useEffect(() => {
+        if (!apiPath || !/^\d+$/.test(userid || "") || memberIdx >= 0) return;
+        let current = true;
+        // Public profile links must not depend on the signed-in member directory.
+        makeRequestsAuto([{ url: `${apiPath}/user/profile?userid=${userid}`, auth: "prefer" }]).then(([profile]) => {
+            if (current && profile?.uid !== undefined && !profile.error) setLinkedProfile(profile);
+        });
+        return () => { current = false; };
+    }, [apiPath, userid, memberIdx]);
+    useEffect(() => {
+        if (profileUser) setShowProfileModal(2);
+    }, [userid, profileUser?.uid]);
 
     const [latest, setLatest] = useState(cache.overview.latest);
     const [delta, setDelta] = useState(cache.overview.delta);
@@ -123,9 +137,10 @@ const Overview = () => {
 
     return (
         <>
-            {showProfileModal !== 0 && allMembers[memberIdx] !== undefined && (
+            {showProfileModal !== 0 && profileUser && (
                 <UserCard
-                    user={allMembers[memberIdx]}
+                    key={profileUser.uid}
+                    user={profileUser}
                     showProfileModal={showProfileModal}
                     onProfileModalClose={() => {
                         setShowProfileModal(0);
