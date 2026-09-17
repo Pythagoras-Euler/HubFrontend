@@ -1,4 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { AppContext } from "../context";
 import { Typography } from "@mui/material";
 import { Map, View } from "ol";
 import { Tile } from "ol/layer";
@@ -33,7 +35,10 @@ function calculateCenterPoint(points) {
   return [centerX, centerY];
 }
 
-const TileMap = ({ tilesUrl, title, style, route, points, onPointClick, onBoundaryChange, showOrangeOnly }) => {
+const TileMap = ({ tilesUrl, title, style, route, markers, points, onPointClick, onBoundaryChange, showOrangeOnly }) => {
+  const { apiPath } = useContext(AppContext);
+  const { t: tr } = useTranslation();
+  const [mapError, setMapError] = useState(false);
   // showOrangeOnly => show vtc player only
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -43,9 +48,20 @@ const TileMap = ({ tilesUrl, title, style, route, points, onPointClick, onBounda
   const orangeOnlyRef = useRef(false);
   const pointsLayer = useRef(undefined);
   const heatmapLayer = useRef(undefined);
+  const deliveryLayer = useRef(undefined);
 
   useEffect(() => {
     isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      mapRef.current?.setTarget(null);
+      mapRef.current?.dispose();
+      mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
 
     async function doLoad({ tilesUrl, route, points, showOrangeOnly }) {
       if (!isMountedRef.current) {
@@ -53,8 +69,15 @@ const TileMap = ({ tilesUrl, title, style, route, points, onPointClick, onBounda
       }
 
       if (!mapRef.current) {
-        const infoUrl = tilesUrl.replace(/\/tiles$/, "") + "/info/TileMapInfo.json";
+        const knownMap = tilesUrl.match(/^https:\/\/map\.charlws\.com\/(ets2|ats)\/(base|promods|promods-classic)\/tiles$/);
+        const infoUrl = knownMap ? `${apiPath}/map/info/${knownMap[1]}/${knownMap[2]}` : tilesUrl.replace(/\/tiles$/, "") + "/info/TileMapInfo.json";
         const [mapInfo] = await makeRequestsAuto([{ url: infoUrl, auth: false }]);
+        if (cancelled || !isMountedRef.current) return;
+        if (!mapInfo || mapInfo.error || !Number.isFinite(mapInfo.x1)) {
+          setMapError(true);
+          return;
+        }
+        setMapError(false);
 
         const tsProjection = new Projection({
           code: "ZOOMIFY",
@@ -82,7 +105,7 @@ const TileMap = ({ tilesUrl, title, style, route, points, onPointClick, onBounda
             }),
           ],
           view: new View({
-            center: route === undefined || route === null || route.length === 0 ? [(mapInfo.x1 + mapInfo.x2) / 2, (mapInfo.y1 + mapInfo.y2) / 2] : calculateCenterPoint(route), // Set the initial center coordinates
+            center: route?.length ? calculateCenterPoint(route) : markers?.length ? calculateCenterPoint(markers) : [(mapInfo.x1 + mapInfo.x2) / 2, -(mapInfo.y1 + mapInfo.y2) / 2],
             zoom: 1, // Set the initial zoom level
             minZoom: mapInfo.minZoom,
             maxZoom: mapInfo.maxZoom,
@@ -114,6 +137,10 @@ const TileMap = ({ tilesUrl, title, style, route, points, onPointClick, onBounda
       }
 
       const map = mapRef.current;
+      if (deliveryLayer.current) {
+        map.removeLayer(deliveryLayer.current);
+        deliveryLayer.current = undefined;
+      }
 
       if (route !== undefined && route !== null && route.length !== 0) {
         const lineStyle = new Style({
@@ -144,6 +171,16 @@ const TileMap = ({ tilesUrl, title, style, route, points, onPointClick, onBounda
         });
 
         map.addLayer(vectorLayer);
+        deliveryLayer.current = vectorLayer;
+      } else if (markers?.length) {
+        const source = new VectorSource({ features: markers.map(([x, z]) => new Feature(new Point([x, -z]))) });
+        const layer = new VectorLayer({
+          source,
+          style: new Style({ image: new CircleStyle({ radius: 6, fill: new Fill({ color: "#f39621" }), stroke: new Stroke({ color: "white", width: 2 }) }) }),
+        });
+        map.addLayer(layer);
+        deliveryLayer.current = layer;
+        map.getView().fit(source.getExtent(), { padding: [90, 35, 35, 35], maxZoom: 5 });
       }
 
       if (points !== undefined && points !== null && points.length !== 0 && (pointsRef.current !== points || orangeOnlyRef.current !== showOrangeOnly)) {
@@ -276,23 +313,20 @@ const TileMap = ({ tilesUrl, title, style, route, points, onPointClick, onBounda
         });
       }
 
-      // Clean up the map instance when the component unmounts
-      return () => {
-        isMountedRef.current = false; // Set isMounted to false when the component unmounts
-        map.setTarget(null);
-      };
     }
 
     doLoad({ tilesUrl, route, points, showOrangeOnly });
-  }, [tilesUrl, route, points, showOrangeOnly]);
+    return () => { cancelled = true; };
+  }, [apiPath, tilesUrl, route, markers, points, showOrangeOnly]);
 
   return (
     <div style={{ borderRadius: "10px", overflow: "hidden", height: "600px", ...style }}>
-      <div ref={mapContainerRef} style={{ width: "100%", height: "100%", background: "#484E66" }}>
-        <Typography variant="body2" sx={{ position: "absolute", zIndex: 1, margin: "5px", color: "white" }}>
+      <div ref={mapContainerRef} style={{ position: "relative", width: "100%", height: "100%", background: "#484E66" }}>
+        <Typography variant="body2" sx={{ position: "absolute", zIndex: 1, margin: "5px", maxWidth: "calc(100% - 10px)", boxSizing: "border-box", p: "4px 6px", borderRadius: "4px", backgroundColor: "rgba(0,0,0,0.65)", color: "white" }}>
           {title}
+          {mapError && <><br />{tr("map_temporarily_unavailable")}</>}
         </Typography>
-        {route !== undefined && route !== null && route.length === 0 && <div style={{ backgroundColor: "rgb(0,0,0,0.5)", height: "100%", width: "100%" }}></div>}
+        {route !== undefined && route !== null && route.length === 0 && !markers?.length && <div style={{ backgroundColor: "rgb(0,0,0,0.5)", height: "100%", width: "100%" }}></div>}
       </div>
     </div>
   );

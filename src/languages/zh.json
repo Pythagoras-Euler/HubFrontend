@@ -1245,5 +1245,14 @@
   "you_are_logged_out": "您已退出",
   "you_have_resigned_goodbye_and_best_wishes": "你已经辞职了！再见并致以最美好的祝愿！",
   "you_may_try_to_reload_it_in_detailed_info_modal": "您可以尝试在详细信息模式中重新加载它。",
-  "you_received_a_new_rank_role": "你获得了一个新的等级角色"
+  "you_received_a_new_rank_role": "你获得了一个新的等级角色",
+  "not_provided": "未提供",
+  "special_depot_not_provided": "特种运输货场（未提供名称）",
+  "depot_not_provided": "未提供货场",
+  "transport_started_at": "运输开始时间",
+  "transport_ended_at": "运输结束时间",
+  "delivery_event_positions": "已记录的事件位置",
+  "delivery_route_not_provided": "未提供行驶轨迹",
+  "trucky_route_unavailable": "Trucky 未提供完整行驶轨迹。地图上的事件标记仅表示已记录的位置，不代表完整路线。",
+  "map_temporarily_unavailable": "地图暂时无法加载，请稍后重试。"
 }

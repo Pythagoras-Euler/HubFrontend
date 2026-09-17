@@ -13,6 +13,7 @@ import { faStamp } from "@fortawesome/free-solid-svg-icons";
 
 import SimpleBar from "simplebar-react";
 
+import { companyLabel, formatDeliveryTime, DeliveryTimes, SpeedDetails, deliveryEventPositions, canReloadRoute } from "../components/delivery-details";
 import DeliveryVehicles, { vehicleName } from "../components/delivery-vehicles";
 import UserCard from "../components/usercard";
 import ListModal from "../components/listmodal";
@@ -29,7 +30,7 @@ function bool2int(b) {
 const COUNTRY_FLAG = { uk: "🇬🇧", germany: "🇩🇪", france: "🇫🇷", netherlands: "🇳🇱", poland: "🇵🇱", norway: "🇳🇴", italy: "🇮🇹", lithuania: "🇱🇹", switzerland: "🇨🇭", sweden: "🇸🇪", czech: "🇨🇿", portugal: "🇵🇹", austria: "🇦🇹", denmark: "🇩🇰", finland: "🇫🇮", belgium: "🇧🇪", romania: "🇷🇴", russia: "🇷🇺", slovakia: "🇸🇰", turkey: "🇹🇷", hungary: "🇭🇺", bulgaria: "🇧🇬", latvia: "🇱🇻", estonia: "🇪🇪", ireland: "🇮🇪", croatia: "🇭🇷", greece: "🇬🇷", serbia: "🇷🇸", ukraine: "🇺🇦", slovenia: "🇸🇮", malta: "🇲🇹", andorra: "🇦🇩", macedonia: "🇲🇰", jordan: "🇯🇴", egypt: "🇪🇬", israel: "🇮🇱", montenegro: "🇲🇪", australia: "🇦🇺" };
 
 const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doReload, divisionMeta, setDoReload, setDivisionStatus, setNewDivisionStatus, setDivisionMeta, setSelectedDivision, handleDivision, setDeleteOpen }) => {
-    const { t: tr } = useTranslation();
+    const { t: tr, i18n } = useTranslation();
     const { apiPath, webConfig, curUID, curUser, curUserPerm, userSettings } = useContext(AppContext);
 
     const EVENT_ICON = { "job.started": <LocalShippingRounded />, "job.delivered": <FlagRounded />, "job.cancelled": <CloseRounded />, "fine": <GavelRounded />, "tollgate": <TollRounded />, "ferry": <DirectionsBoatRounded />, "train": <TrainRounded />, "collision": <CarCrashRounded />, "repair": <BuildRounded />, "refuel": <LocalGasStationRounded />, "teleport": <FlightTakeoffRounded />, "speeding": <SpeedRounded /> };
@@ -67,7 +68,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
     const [dlogDetail, setDlogDetail] = useState({});
     const [dlogRoute, setDlogRoute] = useState([]);
     const [dlogMap, setDlogMap] = useState(null);
-    // const [replayProgress, setReplayProgress] = useState(0);
+    const eventPositions = useMemo(() => deliveryEventPositions(dlogDetail.events), [dlogDetail.events]);
 
     if (window.isElectron) {
         window.electron.ipcRenderer.send("presence-update", {
@@ -102,14 +103,15 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
     const navigate = useNavigate();
 
     const handleReloadRoute = useCallback(async () => {
+        if (!canReloadRoute(dlog.tracker, dlog.telemetry)) return;
         window.loading += 1;
-
-        await axios({ url: `${apiPath}/tracksim/update/route`, data: { logid: dlog.logid }, method: "POST", headers: { Authorization: `Bearer ${getAuthToken()}` } });
-
-        window.loading -= 1;
-
+        try {
+            await axios({ url: `${apiPath}/tracksim/update/route`, data: { logid: dlog.logid }, method: "POST", headers: { Authorization: `Bearer ${getAuthToken()}` } });
+        } finally {
+            window.loading -= 1;
+        }
         setDoReload(+new Date());
-    }, [apiPath, dlog.logid, setDoReload]);
+    }, [apiPath, dlog.logid, dlog.tracker, dlog.telemetry, setDoReload]);
 
     useEffect(() => {
         async function doLoad() {
@@ -194,10 +196,11 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
             }
 
             let points = [];
-            let telemetry = data.telemetry.split(";");
+            let telemetry = (data.telemetry || "").split(";");
             let basic = telemetry[0].split(",");
             let tver = 1;
-            if (basic[0].startsWith("v2")) tver = 2;
+            if (basic[0].startsWith("v1")) tver = 1;
+            else if (basic[0].startsWith("v2")) tver = 2;
             else if (basic[0].startsWith("v3")) tver = 3;
             else if (basic[0].startsWith("v4")) tver = 4;
             else if (basic[0].startsWith("v5")) tver = 5;
@@ -222,8 +225,10 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                         }
                         let p = route[i].split(",");
                         if (p.length < 2) continue;
-                        if (tver === 1)
-                            points.push([p[0], p[2]]); // x, z
+                        if (tver === 1) {
+                            if (p.length >= 3 && Number.isFinite(Number(p[0])) && Number.isFinite(Number(p[2])))
+                                points.push([Number(p[0]), Number(p[2])]); // x, z
+                        }
                         else if (tver === 2) points.push([b62decode(p[0]), b62decode(p[1])]);
                         else if (tver >= 3) {
                             let relx = b62decode(p[0]);
@@ -290,7 +295,6 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                         }
                     }
                 }
-                setDlogRoute(points);
 
                 let isPromods = mods === "promods" || JSON.stringify(data).toLowerCase().indexOf("promods") !== -1;
                 if (game === "1") {
@@ -308,12 +312,16 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                 }
             }
 
+            setDlogRoute(points);
+
             const lmi = [
                 { name: tr("log_id"), value: dlogD.public_id || logid },
                 { name: `Tracker`, value: TRACKER[data.tracker] },
                 { name: `Tracker Job ID`, key: "id" },
                 { name: tr("time_submitted"), value: <TimeDelta key={`${+new Date()}`} timestamp={data.timestamp * 1000} /> },
                 { name: tr("time_spent"), value: CalcInterval(new Date(detail.start_time), new Date(detail.stop_time)) },
+                { name: tr("transport_started_at"), value: formatDeliveryTime(detail.start_time, userSettings.display_timezone, i18n.language, tr("not_provided")) },
+                { name: tr("transport_ended_at"), value: formatDeliveryTime(detail.stop_time, userSettings.display_timezone, i18n.language, tr("not_provided")) },
                 { name: tr("status"), value: data.detail.type === "job.delivered" ? <span style={{ color: theme.palette.success.main }}>{tr("delivered")}</span> : <span style={{ color: theme.palette.error.main }}>{tr("cancelled")}</span> },
                 {
                     name: tr("delivery_route"),
@@ -323,7 +331,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                         ) : (
                             <Typography variant="span" sx={{ flexGrow: 1, display: "flex", alignItems: "center", color: theme.palette.error.main }}>
                                 {tr("unavailable")}
-                                {data.telemetry === "" && (
+                                {canReloadRoute(data.tracker, data.telemetry) && (
                                     <IconButton onClick={handleReloadRoute}>
                                         <RefreshRounded />
                                     </IconButton>
@@ -373,7 +381,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                     name: tr("source_company"),
                     value: (
                         <>
-                            {detail.source_company.name} <span style={{ color: "grey" }}>({detail.source_company.unique_id})</span>
+                            {companyLabel(detail.source_company, detail.is_special, tr)} {detail.source_company?.unique_id && <span style={{ color: "grey" }}>({detail.source_company.unique_id})</span>}
                         </>
                     ),
                 },
@@ -389,7 +397,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                     name: tr("destination_company"),
                     value: (
                         <>
-                            {detail.destination_company.name} <span style={{ color: "grey" }}>({detail.destination_company.unique_id})</span>
+                            {companyLabel(detail.destination_company, detail.is_special, tr)} {detail.destination_company?.unique_id && <span style={{ color: "grey" }}>({detail.destination_company.unique_id})</span>}
                         </>
                     ),
                 },
@@ -484,6 +492,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                         </Typography>
                     </div>
                     <DeliveryVehicles detail={dlogDetail} tr={tr} />
+                    <DeliveryTimes detail={dlogDetail} timeZone={userSettings.display_timezone} locale={i18n.language} tr={tr} />
                     <div style={{ marginTop: "10px" }}>
                         <Grid container spacing={2}>
                             <Grid
@@ -496,7 +505,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                 <Card>
                                     <CardContent style={{ textAlign: "center" }}>
                                         <Typography variant="h6" component="div">
-                                            <b>{dlogDetail.source_company.name}</b>
+                                            <b>{companyLabel(dlogDetail.source_company, dlogDetail.is_special, tr)}</b>
                                         </Typography>
                                         <Typography variant="body2" color="textSecondary" component="div">
                                             {dlogDetail.source_city.name}
@@ -546,7 +555,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                 <Card>
                                     <CardContent style={{ textAlign: "center" }}>
                                         <Typography variant="h6" component="div">
-                                            <b>{dlogDetail.destination_company.name}</b>
+                                            <b>{companyLabel(dlogDetail.destination_company, dlogDetail.is_special, tr)}</b>
                                         </Typography>
                                         <Typography variant="body2" color="textSecondary" component="div">
                                             {dlogDetail.destination_city.name}
@@ -572,8 +581,9 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                                 tr("delivery_route")
                                             ) : (
                                                 <>
-                                                    <span style={{ color: theme.palette.error.main }}>{tr("delivery_route_not_available")}</span>
-                                                    {dlog.telemetry === "" && (
+                                                    <span>{tr(dlog.tracker === "trucky" ? (eventPositions.length ? "delivery_event_positions" : "delivery_route_not_provided") : "delivery_route_not_available")}</span>
+                                                    {dlog.tracker === "trucky" && <><br />{tr("trucky_route_unavailable")}</>}
+                                                    {canReloadRoute(dlog.tracker, dlog.telemetry) && (
                                                         <>
                                                             <br />
                                                             {tr("you_may_try_to_reload_it_in_detailed_info_modal")}
@@ -582,7 +592,9 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                                 </>
                                             )
                                         }
+                                        key={`${dlog.logid}-${dlogMap}`}
                                         tilesUrl={dlogMap}
+                                        markers={dlogRoute.length === 0 ? eventPositions : undefined}
                                         route={dlogRoute}
                                         style={{ height: "100%", minHeight: "380px" }}
                                     />
@@ -613,9 +625,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                                             <>
                                                                 {desc}
                                                                 <br />
-                                                                <>{tr("speed")}</>: {ConvertUnit(userSettings.unit, "km", e.meta.speed * 3.6)}/h
-                                                                <br />
-                                                                <>{tr("limit")}</>: {ConvertUnit(userSettings.unit, "km", e.meta.speed_limit * 3.6)}/h
+                                                                <SpeedDetails meta={e.meta} unit={userSettings.unit} convert={ConvertUnit} tr={tr} />
                                                             </>
                                                         );
                                                     }
@@ -623,7 +633,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                                         <>
                                                             {desc}
                                                             <br />
-                                                            {tr("paid")}
+                                                            {tr("paid")} {" "}
                                                             {CURRENTY_ICON[dlogDetail.game.short_name]}
                                                             {e.meta.amount}
                                                         </>
@@ -631,7 +641,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                                 } else if (e.type === "tollgate") {
                                                     desc = (
                                                         <>
-                                                            {tr("paid")}
+                                                            {tr("paid")} {" "}
                                                             {CURRENTY_ICON[dlogDetail.game.short_name]}
                                                             {e.meta.cost}
                                                         </>
@@ -645,7 +655,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                                             {tr("to")}
                                                             {e.meta.target_name}
                                                             <br />
-                                                            {tr("paid")}
+                                                            {tr("paid")} {" "}
                                                             {CURRENTY_ICON[dlogDetail.game.short_name]}
                                                             {e.meta.cost}
                                                         </>
@@ -653,7 +663,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                                 } else if (e.type === "refuel") {
                                                     desc = (
                                                         <>
-                                                            {tr("paid")}
+                                                            {tr("paid")} {" "}
                                                             {CURRENTY_ICON[dlogDetail.game.short_name]}
                                                             {parseInt(e.meta.amount)}
                                                         </>
@@ -661,9 +671,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                                 } else if (e.type === "speeding") {
                                                     desc = (
                                                         <>
-                                                            <>{tr("max_speed")}</>: {ConvertUnit(userSettings.unit, "km", e.meta.max_speed * 3.6)}/h
-                                                            <br />
-                                                            <>{tr("limit")}</>: {ConvertUnit(userSettings.unit, "km", e.meta.speed_limit * 3.6)}/h
+                                                            <SpeedDetails meta={e.meta} unit={userSettings.unit} convert={ConvertUnit} tr={tr} maximum />
                                                         </>
                                                     );
                                                 }
