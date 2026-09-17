@@ -2,16 +2,16 @@ import { useEffect, useRef, useContext } from "react";
 import { AppContext } from "../context";
 
 import { Card, CardContent, Typography, Chip, Tooltip } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import { useTheme, alpha } from "@mui/material/styles";
 
 import Chart from "chart.js/auto";
 
-import { getTimezoneOffset } from "../functions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendDown, faArrowTrendUp } from "@fortawesome/free-solid-svg-icons";
 
 const StatCard = props => {
-  let { icon, title, latest, delta, deltaLabel, inputs, originalInputs, xAxis, size, height, color } = props;
+  let { icon, title, latest, delta, deltaLabel, inputs = [], originalInputs, xAxis, size, height, color, emptyText } = props;
+  const empty = Boolean(emptyText) && !inputs.some(value => Number.isFinite(value) && value !== 0);
 
   deltaLabel = deltaLabel === undefined ? "" : deltaLabel + " ";
 
@@ -24,16 +24,16 @@ const StatCard = props => {
   const chartRef = useRef(null);
 
   useEffect(() => {
+    if (empty || !chartRef.current) return;
     const ctx = chartRef.current.getContext("2d");
 
     const generateLabels = () => {
       return Array.from({ length: inputs.length }, (_, i) => i + 1);
     };
 
-    var gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, color + "75");
-    gradient.addColorStop(0.382, color + "25");
-    gradient.addColorStop(0.618, color + "10");
+    var gradient = ctx.createLinearGradient(0, 0, 0, chartRef.current.clientHeight || 100);
+    gradient.addColorStop(0, alpha(color, 0.3));
+    gradient.addColorStop(1, alpha(color, 0.02));
 
     const data = {
       labels: generateLabels(),
@@ -41,7 +41,7 @@ const StatCard = props => {
         {
           label: "Dataset",
           data: inputs,
-          fill: "start",
+          fill: "origin",
           borderColor: color,
           backgroundColor: gradient,
         },
@@ -77,14 +77,13 @@ const StatCard = props => {
                     return title;
                   },
                   label: function (context) {
-                    let endTime = new Date(xAxis[context.dataIndex].endTime * 1000 - getTimezoneOffset(userSettings.display_timezone) * 60000).toISOString().replaceAll("T", " ").split(".")[0];
-
-                    // remove the seconds part
-                    endTime = endTime.split(":");
-                    endTime.pop();
-                    endTime = endTime.join(":");
-
-                    if (originalInputs.length === 100) endTime = endTime.split(" ")[0];
+                    let endTime = "";
+                    const date = new Date((xAxis[context.dataIndex].endTime - 1) * 1000);
+                    try {
+                      endTime = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone: userSettings.display_timezone || "UTC" }).format(date);
+                    } catch {
+                      endTime = date.toISOString().slice(0, 16).replace("T", " ") + " UTC";
+                    }
 
                     return [originalInputs[context.dataIndex], endTime];
                   },
@@ -96,7 +95,7 @@ const StatCard = props => {
       },
       elements: {
         line: {
-          tension: 0.5,
+          tension: 0.2,
         },
         point: {
           radius: 0,
@@ -121,7 +120,7 @@ const StatCard = props => {
     return () => {
       chart.destroy();
     };
-  }, [inputs, color]);
+  }, [inputs, color, empty, originalInputs, xAxis, title, userSettings.display_timezone]);
 
   return (
     <Card>
@@ -147,8 +146,8 @@ const StatCard = props => {
           {delta === undefined && latest !== undefined && <Chip label={latest} sx={{ fontFamily: "Orbitron", borderRadius: "5px" }}></Chip>}
         </div>
       </CardContent>
-      <div style={{ height: height }}>
-        <canvas ref={chartRef} style={{ height: height }} />
+      <div style={{ height: height, position: "relative" }}>
+        {empty ? <Typography color="text.secondary" sx={{ px: 2, pt: 2 }}>{emptyText}</Typography> : <canvas ref={chartRef} role="img" aria-label={title} style={{ height: height }} />}
       </div>
     </Card>
   );

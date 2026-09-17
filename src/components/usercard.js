@@ -42,7 +42,7 @@ import useLongPress from "./useLongPress";
 import RoleSelect from "./roleselect";
 import TimeDelta from "./timedelta";
 import MarkdownRenderer from "./markdown";
-import StatCard from "./statcard";
+import ProfileCharts from "./profile-charts";
 import CustomTable from "./table";
 import { darkenColor } from "../designs";
 
@@ -315,7 +315,6 @@ const UserCard = props => {
     return newDlogList;
   }
   const cachedUserProfile = userProfiles[user.uid];
-  const [chartStats, setChartStats] = useState(cachedUserProfile ? cachedUserProfile.chartStats : null);
   const [overallStats, setOverallStats] = useState(cachedUserProfile ? cachedUserProfile.overallStats : null);
   const [detailStats, setDetailStats] = useState(cachedUserProfile ? cachedUserProfile.detailStats : null);
   const [pointStats, setPointStats] = useState(cachedUserProfile ? cachedUserProfile.pointStats : null);
@@ -331,8 +330,7 @@ const UserCard = props => {
     async function loadProfile() {
       window.loading += 1;
 
-      const [_chart, _overall, _details, _point, _dlogList] = await makeRequestsAuto([
-        { url: `${apiPath}/dlog/statistics/chart?userid=${user.userid}&ranges=7&interval=86400&sum_up=false&before=` + getTodayUTC() / 1000, auth: "prefer" },
+      const [_overall, _details, _point, _dlogList] = await makeRequestsAuto([
         { url: `${apiPath}/dlog/statistics/summary?userid=${user.userid}`, auth: "prefer" },
         { url: `${apiPath}/dlog/statistics/details?userid=${user.userid}`, auth: "prefer" },
         { url: `${apiPath}/dlog/leaderboard?userids=${user.userid}`, auth: true },
@@ -340,16 +338,6 @@ const UserCard = props => {
       ]);
 
       let userProfile = {};
-
-      let newCharts = { distance: [], fuel: [], profit_euro: [], profit_dollar: [] };
-      for (let i = 0; i < _chart.length; i++) {
-        newCharts.distance.push(_chart[i].distance.sum);
-        newCharts.fuel.push(_chart[i].fuel.sum);
-        newCharts.profit_euro.push(_chart[i].profit.euro);
-        newCharts.profit_dollar.push(_chart[i].profit.dollar);
-      }
-      setChartStats(newCharts);
-      userProfile.chartStats = newCharts;
 
       setOverallStats(_overall);
       userProfile.overallStats = _overall;
@@ -1097,46 +1085,7 @@ const UserCard = props => {
                 </Box>
               </TabPanel>
               <TabPanel value={tab} index={1}>
-                {chartStats && (
-                  <Grid container spacing={2}>
-                    <Grid
-                      size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 6,
-                      }}>
-                      <StatCard icon={<RouteRounded />} title={tr("distance")} inputs={chartStats.distance} size="small" height="75px" />
-                    </Grid>
-                    <Grid
-                      size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 6,
-                      }}>
-                      <StatCard icon={<LocalGasStationRounded />} title={tr("fuel")} inputs={chartStats.fuel} size="small" height="75px" />
-                    </Grid>
-                    <Grid
-                      size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 6,
-                      }}>
-                      <StatCard icon={<EuroRounded />} title={tr("profit_ets2")} inputs={chartStats.profit_euro} size="small" height="75px" />
-                    </Grid>
-                    <Grid
-                      size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 6,
-                      }}>
-                      <StatCard icon={<AttachMoneyRounded />} title={tr("profit_ats")} inputs={chartStats.profit_dollar} size="small" height="75px" />
-                    </Grid>
-                  </Grid>
-                )}
+                <ProfileCharts userid={user.userid} />
                 {overallStats && overallStats.job && (
                   <Grid container spacing={2} sx={{ mt: "5px" }}>
                     <Grid

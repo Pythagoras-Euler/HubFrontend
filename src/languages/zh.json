@@ -1264,5 +1264,14 @@
   "map_existing_role": "映射现有职位",
   "assign_trainee": "划为实习司机",
   "role_name": "职位名称",
-  "operation_failed": "操作失败"
+  "operation_failed": "操作失败",
+  "profile_recent_days": "近 {{days}} 天",
+  "profile_no_activity": "此时段暂无记录",
+  "profile_lifetime_stats": "累计统计",
+  "truckershub_routes": "TruckersHub 路线",
+  "configured": "已配置",
+  "not_configured": "未配置",
+  "banner_background_url": "横幅背景图地址",
+  "banner_background_opacity": "横幅背景不透明度",
+  "time_range": "时间范围"
 }

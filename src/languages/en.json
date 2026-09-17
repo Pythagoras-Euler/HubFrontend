@@ -1264,5 +1264,14 @@
   "map_existing_role": "Map existing role",
   "assign_trainee": "Assign trainee",
   "role_name": "Role name",
-  "operation_failed": "Operation failed"
+  "operation_failed": "Operation failed",
+  "profile_recent_days": "Last {{days}} days",
+  "profile_no_activity": "No activity in this period",
+  "profile_lifetime_stats": "All-time statistics",
+  "truckershub_routes": "TruckersHub routes",
+  "configured": "Configured",
+  "not_configured": "Not configured",
+  "banner_background_url": "Banner background image URL",
+  "banner_background_opacity": "Banner background opacity",
+  "time_range": "Time range"
 }

@@ -1,3 +1,4 @@
+import TruckersHubRoutes from "../components/truckershub-routes";
 import TruckyRoleMappings from "../components/trucky-role-mappings";
 import { useState, useEffect, useCallback, memo, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -253,7 +254,7 @@ const MemoGeneralForm = memo(({ theme, formConfig }) => {
                 <TextField
                     style={{ marginBottom: "16px" }}
                     key="banner_background_url"
-                    label="Banner Background URL"
+                    label={tr("banner_background_url")}
                     variant="outlined"
                     fullWidth
                     value={formConfig.state.banner_background_url}
@@ -297,7 +298,7 @@ const MemoGeneralForm = memo(({ theme, formConfig }) => {
                 <TextField
                     style={{ marginBottom: "16px" }}
                     key="banner_background_opacity"
-                    label="Banner Background Opacity"
+                    label={tr("banner_background_opacity")}
                     variant="outlined"
                     fullWidth
                     value={formConfig.state.banner_background_opacity}
@@ -691,6 +692,7 @@ const MemoTrackerForm = memo(({ theme, formConfig }) => {
     return (
         <>
             <TruckyRoleMappings />
+            <TruckersHubRoutes />
             {formConfig.state.trackers.length === 0 && (
                 <div style={{ display: "flex", alignItems: "center" }}>
                     <Typography variant="body2" fontWeight="bold" sx={{ mb: "10px", flexGrow: 1 }}>
