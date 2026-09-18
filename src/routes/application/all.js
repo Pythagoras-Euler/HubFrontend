@@ -12,6 +12,8 @@ import TimeDelta from "../../components/timedelta";
 import MarkdownRenderer from "../../components/markdown";
 import UserSelect from "../../components/userselect";
 import StatCard from "../../components/statcard";
+import ChartRange from "../../components/chart-range";
+import { profileChartWindow } from "../../components/profile-chart-data";
 
 import { makeRequestsAuto, customAxios as axios, getAuthToken, TSep, removeNUEValues } from "../../functions";
 
@@ -32,14 +34,24 @@ const ApplicationTable = memo(({ showDetail, doReload }) => {
         []
     );
 
-    const [latest, setLatest] = useState({ driver_accepted: 0, driver_declined: 0 });
-    const [delta, setDelta] = useState({ driver_accepted: 0, driver_declined: 0 });
+    const [days, setDays] = useState(30);
     const [charts, setCharts] = useState({ driver_accepted: [], driver_declined: [] });
-    const [originalChart, setOriginalChart] = useState({ driver_accepted: [], driver_declined: [] });
     const [xAxis, setXAxis] = useState([]);
+    const [chartError, setChartError] = useState(false);
+    useEffect(() => {
+        let current = true;
+        setXAxis([]); setChartError(false);
+        const params = new URLSearchParams({ ...profileChartWindow(days), sum_up: false });
+        makeRequestsAuto([{ url: `${apiPath}/applications/statistics?${params}`, auth: true }]).then(([rows]) => {
+            if (!current) return;
+            if (!Array.isArray(rows)) { setChartError(true); return; }
+            setCharts({ driver_accepted: rows.map(row => Number(row.data?.[1]?.[1] || 0)), driver_declined: rows.map(row => Number(row.data?.[1]?.[2] || 0)) });
+            setXAxis(rows.map(row => ({ startTime: row.start_time, endTime: row.end_time })));
+        }).catch(() => { if (current) setChartError(true); });
+        return () => { current = false; };
+    }, [apiPath, days, doReload]);
     const [applications, setApplications] = useState([]);
 
-    const inited = useRef(false);
     const [totalItems, setTotalItems] = useState(0);
     const [page, setPage] = useState(1);
     const pageRef = useRef(1);
@@ -65,44 +77,7 @@ const ApplicationTable = memo(({ showDetail, doReload }) => {
 
             let processedParam = removeNUEValues(listParam);
 
-            let [_stats, _applications] = [{}, {}];
-
-            if (!inited.current || +new Date() - doReload <= 1000) {
-                [_stats, _applications] = await makeRequestsAuto([
-                    { url: `${apiPath}/applications/statistics?interval=604800&range=12&before=${parseInt(+new Date() / 1000)}`, auth: true },
-                    { url: `${apiPath}/applications/list?all_user=true&page=${page}&page_size=${pageSize}&${new URLSearchParams(processedParam).toString()}`, auth: true },
-                ]);
-                inited.current = true;
-
-                for (let i = 0; i < _stats.length; i++) {
-                    if (!_stats[i].data[1]) _stats[i].data[1] = { 1: 0, 2: 0 };
-                    if (!_stats[i].data[1][1]) _stats[i].data[1][1] = 0;
-                    if (!_stats[i].data[1][2]) _stats[i].data[1][2] = 0;
-                }
-
-                let newLatest = { driver_accepted: _stats[_stats.length - 1].data[1][1], driver_declined: _stats[_stats.length - 1].data[1][2] };
-                setLatest(newLatest);
-
-                let newDelta = { driver_accepted: newLatest.driver_accepted - _stats[0].data[1][1], driver_declined: newLatest.driver_declined - _stats[0].data[1][2] };
-                setDelta(newDelta);
-
-                let newCharts = { driver_accepted: [], driver_declined: [] };
-                let newOriginalChart = { driver_accepted: [], driver_declined: [] };
-                let newXAxis = [];
-                for (let i = 0; i < _stats.length; i++) {
-                    newXAxis.push({ startTime: _stats[i].start_time, endTime: _stats[i].end_time });
-                    newOriginalChart.driver_accepted.push(_stats[i].data[1][1]);
-                    newOriginalChart.driver_declined.push(_stats[i].data[1][2]);
-                    // we don't have base data (for summing up) so we use the same data
-                    newCharts.driver_accepted.push(_stats[i].data[1][1]);
-                    newCharts.driver_declined.push(_stats[i].data[1][2]);
-                }
-                setCharts(newCharts);
-                setOriginalChart(newOriginalChart);
-                setXAxis(newXAxis);
-            } else {
-                [_applications] = await makeRequestsAuto([{ url: `${apiPath}/applications/list?all_user=true&page=${page}&page_size=${pageSize}&${new URLSearchParams(processedParam).toString()}`, auth: true }]);
-            }
+            const [_applications] = await makeRequestsAuto([{ url: `${apiPath}/applications/list?all_user=true&page=${page}&page_size=${pageSize}&${new URLSearchParams(processedParam).toString()}`, auth: true }]);
             let newApplications = [];
             for (let i = 0; i < _applications.list.length; i++) {
                 let app = _applications.list[i];
@@ -201,7 +176,9 @@ const ApplicationTable = memo(({ showDetail, doReload }) => {
 
     return (
         <>
-            {xAxis.length !== 0 && applicationTypes[1]?.name && (
+            <ChartRange days={days} onChange={setDays} />
+            {xAxis.length === 0 && <Typography>{tr(chartError ? "operation_failed" : "loading")}</Typography>}
+            {xAxis.length !== 0 && applicationTypes?.[1]?.name && (
                 <Grid container spacing={2} style={{ marginBottom: "20px" }}>
                     <Grid
                         size={{
@@ -210,7 +187,7 @@ const ApplicationTable = memo(({ showDetail, doReload }) => {
                             md: 6,
                             lg: 6,
                         }}>
-                        <StatCard icon={<CheckRounded />} title={applicationTypes[1]?.name + " " + tr("accepted")} inputs={charts.driver_accepted} originalInputs={originalChart.driver_accepted} xAxis={xAxis} color={theme.palette.success.main} />
+                        <StatCard icon={<CheckRounded />} title={applicationTypes[1]?.name + " " + tr("accepted")} inputs={charts.driver_accepted} latest={TSep(charts.driver_accepted.reduce((a, b) => a + b, 0))} emptyText={tr("chart_no_applications")} size="small" height="100px" originalInputs={charts.driver_accepted} xAxis={xAxis} color={theme.palette.success.main} />
                     </Grid>
                     <Grid
                         size={{
@@ -219,7 +196,7 @@ const ApplicationTable = memo(({ showDetail, doReload }) => {
                             md: 6,
                             lg: 6,
                         }}>
-                        <StatCard icon={<CloseRounded />} title={applicationTypes[1]?.name + " " + tr("declined")} inputs={charts.driver_declined} originalInputs={originalChart.driver_declined} xAxis={xAxis} color={theme.palette.error.main} />
+                        <StatCard icon={<CloseRounded />} title={applicationTypes[1]?.name + " " + tr("declined")} inputs={charts.driver_declined} latest={TSep(charts.driver_declined.reduce((a, b) => a + b, 0))} emptyText={tr("chart_no_applications")} size="small" height="100px" originalInputs={charts.driver_declined} xAxis={xAxis} color={theme.palette.error.main} />
                     </Grid>
                 </Grid>
             )}

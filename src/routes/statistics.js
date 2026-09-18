@@ -1,274 +1,49 @@
-import { useEffect, useState, useContext, useCallback } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useTranslation } from "react-i18next";
-import { AppContext, CacheContext } from "../context";
-import debounce from "lodash.debounce";
-
-import { Grid, Typography, Snackbar, Alert } from "@mui/material";
-import { PermContactCalendarRounded, LocalShippingRounded, RouteRounded, EuroRounded, AttachMoneyRounded, LocalGasStationRounded, WidgetsRounded, FlightTakeoffRounded, FlightLandRounded } from "@mui/icons-material";
-import Portal from "@mui/material/Portal";
-
+import { AppContext } from "../context";
+import { Grid, Typography } from "@mui/material";
+import { LocalShippingRounded, WidgetsRounded, FlightTakeoffRounded, FlightLandRounded } from "@mui/icons-material";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFlag, faRightFromBracket, faTowerObservation, faTrailer } from "@fortawesome/free-solid-svg-icons";
-
-import StatCard from "../components/statcard";
 import DateTimeField from "../components/datetime";
 import UserSelect from "../components/userselect";
 import Podium from "../components/podium";
-
-import { TSep, ConvertUnit, makeRequestsAuto, getTodayUTC } from "../functions";
-
+import ProfileCharts from "../components/profile-charts";
+import ChartRange from "../components/chart-range";
+import { profileChartWindow } from "../components/profile-chart-data";
+import { makeRequestsAuto } from "../functions";
 function replaceUnderscores(str) {
-    return str
-        .split("_")
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
+    return str.split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 }
-
 const Statistics = () => {
     const { t: tr } = useTranslation();
-    const { apiPath, userSettings } = useContext(AppContext);
-    const { cache, setCache } = useContext(CacheContext);
-
-    const [snackbarContent, setSnackbarContent] = useState("");
-    const [snackbarSeverity, setSnackbarSeverity] = useState("success");
-    const handleCloseSnackbar = useCallback(e => {
-        setSnackbarContent("");
-    }, []);
-
-    const [startTime, setStartTime] = useState(cache.statistics.startTime);
-    const [endTime, setEndTime] = useState(cache.statistics.endTime);
-    const [selectedUser, setSelectedUser] = useState(cache.statistics.selectedUser);
-    const [latest, setLatest] = useState(cache.statistics.latest);
-    const [delta, setDelta] = useState(cache.statistics.delta);
-    const [charts, setCharts] = useState(cache.statistics.charts);
-    const [originalChart, setOriginalChart] = useState(cache.statistics.originalChart);
-    const [xAxis, setXAxis] = useState(cache.statistics.xAxis);
-    const [detailStats, setDetailStats] = useState(cache.statistics.detailStats);
-
+    const { apiPath } = useContext(AppContext);
+    const [days, setDays] = useState(30);
+    const [bounds, setBounds] = useState(() => { const w = profileChartWindow(30); return [w.before - w.ranges * w.interval, w.before]; });
+    const [startTime, endTime] = bounds;
+    const [selectedUser, setSelectedUser] = useState({ userid: -1000 });
+    const [detailStats, setDetailStats] = useState({});
+    const total = endTime - startTime;
+    const valid = Number.isFinite(total) && total >= 60;
+    const ranges = Math.min(100, Math.max(1, Math.ceil(total / 86400)));
+    const windowOverride = days ? undefined : { before: endTime, ranges, interval: Math.ceil(total / ranges) };
+    const selectDays = value => { const w = profileChartWindow(value); setDays(value); setBounds([w.before - w.ranges * w.interval, w.before]); };
     useEffect(() => {
-        return () => {
-            setCache(cache => ({
-                ...cache,
-                statistics: {
-                    startTime,
-                    endTime,
-                    selectedUser,
-                    latest,
-                    delta,
-                    charts,
-                    originalChart,
-                    xAxis,
-                    detailStats,
-                },
-            }));
-        };
-    }, [startTime, endTime, selectedUser, latest, delta, charts, originalChart, xAxis, detailStats]);
-
-    useEffect(() => {
-        const doLoad = debounce(async () => {
-            window.loading += 1;
-
-            let totalSeconds = endTime - startTime;
-            if (totalSeconds <= 0) {
-                window.loading -= 1;
-                setSnackbarContent(tr("invalid_time_range"));
-                setSnackbarSeverity("error");
-                return;
-            }
-            let days = Math.ceil(totalSeconds / 86400);
-            let ranges = 7,
-                interval = 86400;
-            if (days <= 1) {
-                ranges = 72;
-                interval = 1200;
-            } // <= 1d | 72 data/d
-            else if (days <= 3) {
-                ranges = days * 24;
-                interval = 3600;
-            } // <= 3d | 24 data/d
-            else if (days <= 7) {
-                ranges = days * 6;
-                interval = 14400;
-            } // <= 7d | 6 data/d
-            else if (days <= 14) {
-                ranges = days * 3;
-                interval = 28800;
-            } // <= 14d | 3 data/d
-            else if (days <= 28) {
-                ranges = days * 2;
-                interval = 43200;
-            } // <= 28d | 2 data/d
-            else if (days <= 100) {
-                ranges = days;
-                interval = 86400;
-            } // <= 100d | 1 data/d
-            else {
-                ranges = 100;
-                interval = Math.ceil(totalSeconds / ranges);
-            }
-
-            try {
-                const [chartSU, detailS] = await makeRequestsAuto([
-                    { url: `${apiPath}/dlog/statistics/chart?ranges=${ranges}&interval=${interval}&sum_up=true&before=${endTime}${selectedUser.userid !== -1000 ? `&userid=${selectedUser.userid}` : ``}`, auth: "prefer" },
-                    { url: `${apiPath}/dlog/statistics/details?after=${startTime}&before=${endTime}${selectedUser.userid !== -1000 ? `&userid=${selectedUser.userid}` : ``}`, auth: true },
-                ]);
-
-                if (chartSU) {
-                    let newLatest = { driver: chartSU[chartSU.length - 1].driver, job: chartSU[chartSU.length - 1].job.sum, distance: chartSU[chartSU.length - 1].distance.sum, fuel: chartSU[chartSU.length - 1].fuel.sum, profit_euro: chartSU[chartSU.length - 1].profit.euro, profit_dollar: chartSU[chartSU.length - 1].profit.dollar };
-                    setLatest(newLatest);
-
-                    let newDelta = { driver: newLatest.driver - chartSU[0].driver, job: newLatest.job - chartSU[0].job.sum, distance: newLatest.distance - chartSU[0].distance.sum, fuel: newLatest.fuel - chartSU[0].fuel.sum, profit_euro: newLatest.profit_euro - chartSU[0].profit.euro, profit_dollar: newLatest.profit_dollar - chartSU[0].profit.dollar };
-                    setDelta(newDelta);
-
-                    let newBase = { driver: (newLatest.driver - chartSU[0].driver) / 10, job: (newLatest.job - chartSU[0].job.sum) / 10, distance: (newLatest.distance - chartSU[0].distance.sum) / 10, fuel: (newLatest.fuel - chartSU[0].fuel.sum) / 10, profit_euro: (newLatest.profit_euro - chartSU[0].profit.euro) / 10, profit_dollar: (newLatest.profit_dollar - chartSU[0].profit.dollar) / 10 };
-
-                    let newCharts = { driver: [], job: [], distance: [], fuel: [], profit_euro: [], profit_dollar: [] };
-                    let newOriginalChart = { driver: [], job: [], distance: [], fuel: [], profit_euro: [], profit_dollar: [] };
-                    let newXAxis = [];
-                    for (let i = 0; i < chartSU.length; i++) {
-                        newXAxis.push({ startTime: chartSU[i].start_time, endTime: chartSU[i].end_time });
-                        newOriginalChart.driver.push(chartSU[i].driver);
-                        newOriginalChart.job.push(chartSU[i].job.sum);
-                        newOriginalChart.distance.push(chartSU[i].distance.sum);
-                        newOriginalChart.fuel.push(chartSU[i].fuel.sum);
-                        newOriginalChart.profit_euro.push(chartSU[i].profit.euro);
-                        newOriginalChart.profit_dollar.push(chartSU[i].profit.dollar);
-                        if (i === 0) {
-                            newCharts.driver.push(newBase.driver);
-                            newCharts.job.push(newBase.job);
-                            newCharts.distance.push(newBase.distance);
-                            newCharts.fuel.push(newBase.fuel);
-                            newCharts.profit_euro.push(newBase.profit_euro);
-                            newCharts.profit_dollar.push(newBase.profit_dollar);
-                        } else {
-                            newCharts.driver.push(newBase.driver + chartSU[i].driver - chartSU[0].driver);
-                            newCharts.job.push(newBase.job + chartSU[i].job.sum - chartSU[0].job.sum);
-                            newCharts.distance.push(newBase.distance + chartSU[i].distance.sum - chartSU[0].distance.sum);
-                            newCharts.fuel.push(newBase.fuel + chartSU[i].fuel.sum - chartSU[0].fuel.sum);
-                            newCharts.profit_euro.push(newBase.profit_euro + chartSU[i].profit.euro - chartSU[0].profit.euro);
-                            newCharts.profit_dollar.push(newBase.profit_dollar + chartSU[i].profit.dollar - chartSU[0].profit.dollar);
-                        }
-                    }
-                    setCharts(newCharts);
-                    setOriginalChart(newOriginalChart);
-                    setXAxis(newXAxis);
-                }
-
-                if (detailS) {
-                    setDetailStats(detailS);
-                }
-            } catch {
-                setSnackbarContent(tr("an_error_occurred_while_loading_data"));
-                setSnackbarSeverity("error");
-            }
-
-            window.loading -= 1;
-        }, 1000);
-        doLoad();
-        return () => doLoad.cancel();
-    }, [apiPath, startTime, endTime, selectedUser]);
-
-    return (
-        <>
-            <Grid container spacing={2}>
-                <Grid
-                    size={{
-                        xs: 6,
-                        md: 4,
-                    }}>
-                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                        {tr("start_time")}
-                    </Typography>
-                    <DateTimeField
-                        defaultValue={startTime}
-                        onChange={timestamp => {
-                            setStartTime(timestamp);
-                        }}
-                        fullWidth
-                        size="small"
-                    />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 6,
-                        md: 4,
-                    }}>
-                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                        {tr("end_time")}
-                    </Typography>
-                    <DateTimeField
-                        defaultValue={endTime}
-                        onChange={timestamp => {
-                            setEndTime(timestamp);
-                        }}
-                        fullWidth
-                        size="small"
-                    />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        md: 4,
-                    }}>
-                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                        {tr("user")}
-                    </Typography>
-                    <UserSelect users={[selectedUser]} isMulti={false} includeCompany={true} onUpdate={setSelectedUser} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<PermContactCalendarRounded />} title={tr("drivers")} latest={TSep(latest.driver).replaceAll(",", " ")} delta={TSep(delta.driver).replaceAll(",", " ")} inputs={charts.driver} originalInputs={originalChart.driver} xAxis={xAxis} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<LocalShippingRounded />} title={tr("jobs")} latest={TSep(latest.job).replaceAll(",", " ")} delta={TSep(delta.job).replaceAll(",", " ")} inputs={charts.job} originalInputs={originalChart.job} xAxis={xAxis} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<RouteRounded />} title={tr("distance")} latest={ConvertUnit(userSettings.unit, "km", latest.distance).replaceAll(",", " ")} delta={ConvertUnit(userSettings.unit, "km", delta.distance).replaceAll(",", " ")} inputs={charts.distance} originalInputs={originalChart.distance} xAxis={xAxis} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<EuroRounded />} title={tr("profit_ets2")} latest={"€" + TSep(latest.profit_euro).replaceAll(",", " ")} delta={"€" + TSep(delta.profit_euro).replaceAll(",", " ")} inputs={charts.profit_euro} originalInputs={originalChart.profit_euro} xAxis={xAxis} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<AttachMoneyRounded />} title={tr("profit_ats")} latest={"$" + TSep(latest.profit_dollar).replaceAll(",", " ")} delta={"$" + TSep(delta.profit_dollar).replaceAll(",", " ")} inputs={charts.profit_dollar} originalInputs={originalChart.profit_dollar} xAxis={xAxis} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<LocalGasStationRounded />} title={tr("fuel")} latest={ConvertUnit(userSettings.unit, "l", latest.fuel).replaceAll(",", " ")} delta={ConvertUnit(userSettings.unit, "l", delta.fuel).replaceAll(",", " ")} inputs={charts.fuel} originalInputs={originalChart.fuel} xAxis={xAxis} />
-                </Grid>
+        let current = true;
+        setDetailStats({});
+        if (!valid) return;
+        makeRequestsAuto([{ url: `${apiPath}/dlog/statistics/details?after=${startTime}&before=${endTime}${selectedUser.userid !== -1000 ? `&userid=${selectedUser.userid}` : ""}`, auth: true }])
+            .then(([data]) => { if (current && data && !data.error) setDetailStats(data); }).catch(() => {});
+        return () => { current = false; };
+    }, [apiPath, startTime, endTime, selectedUser.userid, valid]);
+    return (<>
+        <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid size={{ xs: 6, md: 4 }}><Typography>{tr("start_time")}</Typography><DateTimeField key={`start-${days}`} defaultValue={startTime} onChange={value => { setDays(null); setBounds(previous => [value, previous[1]]); }} fullWidth size="small" /></Grid>
+            <Grid size={{ xs: 6, md: 4 }}><Typography>{tr("end_time")}</Typography><DateTimeField key={`end-${days}`} defaultValue={endTime} onChange={value => { setDays(null); setBounds(previous => [previous[0], value]); }} fullWidth size="small" /></Grid>
+            <Grid size={{ xs: 12, md: 4 }}><UserSelect users={[selectedUser]} isMulti={false} includeCompany onUpdate={setSelectedUser} /></Grid>
+        </Grid>
+        {valid ? <ProfileCharts userid={selectedUser.userid} extended showLifetime={false} days={days} onDaysChange={selectDays} windowOverride={windowOverride} /> : <><ChartRange days={days} onChange={selectDays} /><Typography>{tr("invalid_time_range")}</Typography></>}
+        <Grid container spacing={2}>
                 {detailStats.truck !== undefined && detailStats.truck.length >= 3 && (
                     <Grid
                         size={{
@@ -490,13 +265,7 @@ const Statistics = () => {
                     </Grid>
                 )}
             </Grid>
-            <Portal>
-                <Snackbar open={!!snackbarContent} autoHideDuration={5000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-                    <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity}>
-                        {snackbarContent}
-                    </Alert>
-                </Snackbar>
-            </Portal>
+
         </>
     );
 };

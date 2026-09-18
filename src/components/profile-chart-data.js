@@ -12,6 +12,7 @@ export function profileChartSeries(rows) {
             dollar: rows.some(r => Number(r.job?.ats) > 0),
         },
         distance: rows.map(r => number(r.distance?.sum)), fuel: rows.map(r => number(r.fuel?.sum)),
+        jobs: rows.map(r => number(r.job?.sum)), drivers: rows.map(r => number(r.driver)),
         euro: rows.map(r => number(r.profit?.euro)), dollar: rows.map(r => number(r.profit?.dollar)),
         axis: rows.map(r => ({ endTime: r.end_time, startTime: r.start_time })),
     };

@@ -1273,5 +1273,8 @@
   "not_configured": "Not configured",
   "banner_background_url": "Banner background image URL",
   "banner_background_opacity": "Banner background opacity",
-  "time_range": "Time range"
+  "time_range": "Time range",
+    "chart_new_drivers": "New drivers",
+    "chart_no_new_drivers": "No new drivers in this period",
+    "chart_no_applications": "No applications in this period"
 }

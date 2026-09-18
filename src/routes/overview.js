@@ -9,7 +9,7 @@ import { PermContactCalendarRounded, LocalShippingRounded, RouteRounded, EuroRou
 import SimpleBar from "simplebar-react";
 
 import TimeDelta from "../components/timedelta";
-import StatCard from "../components/statcard";
+import ProfileCharts from "../components/profile-charts";
 import UserCard from "../components/usercard";
 
 import { TSep, ConvertUnit, makeRequestsAuto, getTodayUTC, getMonthUTC } from "../functions";
@@ -38,9 +38,6 @@ const Overview = () => {
         if (profileUser) setShowProfileModal(2);
     }, [userid, profileUser?.uid]);
 
-    const [latest, setLatest] = useState(cache.overview.latest);
-    const [delta, setDelta] = useState(cache.overview.delta);
-    const [charts, setCharts] = useState(cache.overview.charts);
     const [leaderboard, setLeaderboard] = useState(cache.overview.leaderboard);
     const [recentVisitors, setRecentVisitors] = useState(cache.overview.recentVisitors);
     const [newestMember, setNewestMember] = useState(cache.overview.newestMember);
@@ -51,9 +48,6 @@ const Overview = () => {
             setCache(cache => ({
                 ...cache,
                 overview: {
-                    latest,
-                    delta,
-                    charts,
                     leaderboard,
                     recentVisitors,
                     newestMember,
@@ -61,41 +55,13 @@ const Overview = () => {
                 },
             }));
         };
-    }, [latest, delta, charts, leaderboard, recentVisitors, newestMember, latestDelivery]);
+    }, [leaderboard, recentVisitors, newestMember, latestDelivery]);
 
     useEffect(() => {
         async function doLoad() {
             window.loading += 1;
 
-            const [_, chartNSU, chartSU] = await makeRequestsAuto([
-                { url: `${apiPath}`, auth: true }, // access the index url to update user status
-                { url: `${apiPath}/dlog/statistics/chart?ranges=7&interval=86400&sum_up=false&before=` + getTodayUTC() / 1000, auth: false },
-                { url: `${apiPath}/dlog/statistics/chart?ranges=7&interval=86400&sum_up=true`, auth: false },
-            ]);
-
-            if (chartSU && chartSU.length > 0) {
-                let newLatest = { driver: chartSU[chartSU.length - 1].driver, job: chartSU[chartSU.length - 1].job.sum, distance: chartSU[chartSU.length - 1].distance.sum, fuel: chartSU[chartSU.length - 1].fuel.sum, profit_euro: chartSU[chartSU.length - 1].profit.euro, profit_dollar: chartSU[chartSU.length - 1].profit.dollar };
-                setLatest(newLatest);
-                let newDelta = { driver: newLatest.driver - chartSU[0].driver, job: newLatest.job - chartSU[0].job.sum, distance: newLatest.distance - chartSU[0].distance.sum, fuel: newLatest.fuel - chartSU[0].fuel.sum, profit_euro: newLatest.profit_euro - chartSU[0].profit.euro, profit_dollar: newLatest.profit_dollar - chartSU[0].profit.dollar };
-                setDelta(newDelta);
-            }
-
-            if (chartNSU && chartNSU.length > 0) {
-                let newCharts = { driver: [], job: [], distance: [], fuel: [], profit_euro: [], profit_dollar: [] };
-                for (let i = 0; i < chartNSU.length; i++) {
-                    if (i === 0) {
-                        newCharts.driver.push(chartNSU[i].driver);
-                    } else {
-                        newCharts.driver.push(newCharts.driver[i - 1] + chartNSU[i].driver);
-                    }
-                    newCharts.job.push(chartNSU[i].job.sum);
-                    newCharts.distance.push(chartNSU[i].distance.sum);
-                    newCharts.fuel.push(chartNSU[i].fuel.sum);
-                    newCharts.profit_euro.push(chartNSU[i].profit.euro);
-                    newCharts.profit_dollar.push(chartNSU[i].profit.dollar);
-                }
-                setCharts(newCharts);
-            }
+            await makeRequestsAuto([{ url: `${apiPath}`, auth: true }]);
 
             const [nmember, ldelivery] = await makeRequestsAuto([
                 { url: `${apiPath}/member/list?page=1&page_size=1&order_by=join_timestamp&order=desc`, auth: true },
@@ -147,61 +113,8 @@ const Overview = () => {
                     }}
                 />
             )}
+            <ProfileCharts extended showLifetime={false} />
             <Grid container spacing={2}>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<PermContactCalendarRounded />} title={tr("drivers")} latest={TSep(latest.driver).replaceAll(",", " ")} delta={TSep(delta.driver).replaceAll(",", " ")} deltaLabel="Last 7 days" inputs={charts.driver} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<LocalShippingRounded />} title={tr("jobs")} latest={TSep(latest.job).replaceAll(",", " ")} delta={TSep(delta.job).replaceAll(",", " ")} deltaLabel="Last 7 days" inputs={charts.job} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<RouteRounded />} title={tr("distance")} latest={ConvertUnit(userSettings.unit, "km", latest.distance).replaceAll(",", " ")} delta={ConvertUnit(userSettings.unit, "km", delta.distance).replaceAll(",", " ")} deltaLabel="Last 7 days" inputs={charts.distance} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<EuroRounded />} title={tr("profit_ets2")} latest={"€" + TSep(latest.profit_euro).replaceAll(",", " ")} delta={"€" + TSep(delta.profit_euro).replaceAll(",", " ")} deltaLabel="Last 7 days" inputs={charts.profit_euro} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<AttachMoneyRounded />} title={tr("profit_ats")} latest={"$" + TSep(latest.profit_dollar).replaceAll(",", " ")} delta={"$" + TSep(delta.profit_dollar).replaceAll(",", " ")} deltaLabel="Last 7 days" inputs={charts.profit_dollar} />
-                </Grid>
-                <Grid
-                    size={{
-                        xs: 12,
-                        sm: 12,
-                        md: 6,
-                        lg: 4,
-                    }}>
-                    <StatCard icon={<LocalGasStationRounded />} title={tr("fuel")} latest={ConvertUnit(userSettings.unit, "l", latest.fuel).replaceAll(",", " ")} delta={ConvertUnit(userSettings.unit, "l", delta.fuel).replaceAll(",", " ")} deltaLabel="Last 7 days" inputs={charts.fuel} />
-                </Grid>
                 {curUID !== null && newestMember !== null && newestMember !== undefined && latestDelivery !== undefined && latestDelivery !== null && (
                     <>
                         <Grid

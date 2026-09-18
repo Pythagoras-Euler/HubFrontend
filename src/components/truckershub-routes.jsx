@@ -7,6 +7,7 @@ import { checkUserPerm, customAxios as axios, getAuthToken, makeRequestsAuto } f
 export default function TruckersHubRoutes() {
     const { apiPath, curUserPerm } = useContext(AppContext);
     const { t: tr } = useTranslation();
+    const [webhookPath, setWebhookPath] = useState(null);
     const [key, setKey] = useState("");
     const [configured, setConfigured] = useState(false);
     const [status, setStatus] = useState("");
@@ -19,7 +20,7 @@ export default function TruckersHubRoutes() {
         async function load() {
             const [data] = await makeRequestsAuto([{ url: `${apiPath}/truckershub/routes/settings`, auth: true }]);
             if (current && typeof data?.configured === "boolean") {
-                setConfigured(data.configured); setStatus(data.sync?.status || "");
+                setWebhookPath(data.webhook_path || null); setConfigured(data.configured); setStatus(data.sync?.status || "");
                 setError(data.sync?.error || "");
             }
         }
@@ -32,8 +33,8 @@ export default function TruckersHubRoutes() {
         try {
             const result = await axios({ url: `${apiPath}/truckershub/routes/settings`, method: "PUT", headers: { Authorization: `Bearer ${getAuthToken()}` }, data: { api_key: value } });
             if (result.status !== 200) setError(result.data?.error || tr("operation_failed"));
-            else { setConfigured(result.data.configured); setKey(""); setStatus(value ? "pending" : "disabled"); }
-        } finally { setBusy(false); }
+            else { setWebhookPath(result.data.webhook_path || null); setConfigured(result.data.configured); setKey(""); setStatus(value ? "pending" : "disabled"); }
+        } catch { setError(tr("operation_failed")); } finally { setBusy(false); }
     }
     const labels = { pending: "pending", running: "in_progress", complete: "completed", failed: "operation_failed", disabled: "disabled" };
     return <Paper variant="outlined" sx={{ p: 2, my: 2 }}>
@@ -45,5 +46,6 @@ export default function TruckersHubRoutes() {
             <Button disabled={busy || !key.trim()} onClick={() => save(key)}>{tr("save")}</Button>
             {configured && <Button disabled={busy} color="warning" onClick={() => save("")}>{tr("disconnect")}</Button>}
         </Stack>
+        {configured && webhookPath && <TextField sx={{ mt: 2 }} label="TruckersHub Webhook URL" value={new URL(`${apiPath}${webhookPath}`, window.location.origin).href} slotProps={{ input: { readOnly: true } }} onClick={e => e.target.select()} size="small" fullWidth />}
     </Paper>;
 }

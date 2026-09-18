@@ -1273,5 +1273,8 @@
   "not_configured": "未配置",
   "banner_background_url": "横幅背景图地址",
   "banner_background_opacity": "横幅背景不透明度",
-  "time_range": "时间范围"
+  "time_range": "时间范围",
+    "chart_new_drivers": "新增司机",
+    "chart_no_new_drivers": "此时段无新增司机",
+    "chart_no_applications": "此时段无申请"
 }
