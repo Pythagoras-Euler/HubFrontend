@@ -201,11 +201,32 @@ export function getDesignTokens({ vtcBackground, customBackground, webConfig }, 
             },
         },
         MuiButton: {
+            defaultProps: {variant: "contained"},
             styleOverrides: {
-                root: {
-                    fontSize: font_size === "larger" ? "1.1em" : font_size === "smaller" ? "0.9em !important" : undefined,
+                root: ({theme, ownerState}) => {
+                    const neutral = ["primary", "secondary", "inherit", undefined].includes(ownerState.color);
+                    const main = neutral ? (theme.palette.mode === "dark" ? "#90caf9" : "#1565c0") : (theme.palette[ownerState.color]?.main || theme.palette.text.primary);
+                    const hover = neutral ? (theme.palette.mode === "dark" ? "#64b5f6" : "#0d47a1") : theme.palette[ownerState.color]?.dark || main;
+                    const solid = ownerState.variant === "contained";
+                    return {
+                        fontSize: font_size === "larger" ? "1.1em" : font_size === "smaller" ? "0.9em !important" : undefined,
+                        backgroundColor: solid ? main : theme.palette.background.paper.substring(0,7),
+                        color: solid ? theme.palette.getContrastText(main) : main,
+                        border: `1px solid ${main}`,
+                        "&:hover": {backgroundColor: solid ? hover : (theme.palette.mode === "dark" ? "#30363d" : "#edf2f7"), color: solid ? theme.palette.getContrastText(hover) : main},
+                        "&.Mui-disabled": {backgroundColor: theme.palette.mode === "dark" ? "#353a40" : "#e0e0e0", color: theme.palette.mode === "dark" ? "#aeb4bb" : "#666666", borderColor: theme.palette.divider},
+                        "&.Mui-focusVisible": {outline: `3px solid ${main}`, outlineOffset: 2},
+                    };
                 },
             },
+        },
+        MuiIconButton: {
+            styleOverrides: {root: ({theme,ownerState}) => ({
+                color: ["primary","secondary","default",undefined].includes(ownerState.color) ? theme.palette.text.primary : theme.palette[ownerState.color]?.main,
+                backgroundColor: theme.palette.background.paper.substring(0,7),
+                border: `1px solid ${theme.palette.divider}`,
+                "&.Mui-disabled": {backgroundColor: theme.palette.mode === "dark" ? "#353a40" : "#e0e0e0", color: theme.palette.mode === "dark" ? "#aeb4bb" : "#666666"},
+            })},
         },
         MuiTab: {
             styleOverrides: {

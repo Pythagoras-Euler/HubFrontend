@@ -1288,5 +1288,21 @@
     "truckershub_retry": "重新导入",
     "truckershub_load_failed": "配置读取失败，请刷新重试",
     "truckershub_saved": "已保存",
-    "truckershub_save_for_webhook": "保存 API 令牌后生成连接地址"
+    "truckershub_save_for_webhook": "保存 API 令牌后生成连接地址",
+    "active_transports": "运输任务",
+    "closed_transports": "已结束任务",
+    "no_transports": "暂无任务",
+    "abandon_transport": "放弃运输",
+    "confirm_abandon": "确认放弃",
+    "confirm_abandon_transport": "确认在 Hub 中放弃此运输？此操作不会修改追踪器中的任务。",
+    "transport_abandoned": "已放弃",
+    "transport_aborted": "已中止",
+    "transport_duplicate": "重复任务已归并",
+    "transport_completed": "已完成",
+    "active_delivery_timeout_days": "未完成运输自动中止天数",
+    "delivery_route_restricted": "路线访问权限不足",
+    "delivery_route_disabled": "路线功能未启用",
+    "delivery_route_pending": "路线尚未获取",
+    "delivery_route_fetch_failed": "路线获取失败，稍后重试",
+    "delivery_route_missing": "此运单暂无路线"
 }

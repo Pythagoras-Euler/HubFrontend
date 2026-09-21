@@ -1288,5 +1288,21 @@
     "truckershub_retry": "Retry import",
     "truckershub_load_failed": "Could not load settings. Please refresh and try again.",
     "truckershub_saved": "Saved",
-    "truckershub_save_for_webhook": "Save the API token to generate the webhook URL"
+    "truckershub_save_for_webhook": "Save the API token to generate the webhook URL",
+    "active_transports": "Transports",
+    "closed_transports": "Closed transports",
+    "no_transports": "No transports",
+    "abandon_transport": "Abandon transport",
+    "confirm_abandon": "Confirm abandonment",
+    "confirm_abandon_transport": "Abandon this transport in Hub? This will not change the task in your tracker.",
+    "transport_abandoned": "Abandoned",
+    "transport_aborted": "Aborted",
+    "transport_duplicate": "Duplicate merged",
+    "transport_completed": "Completed",
+    "active_delivery_timeout_days": "Days before unfinished transports are aborted",
+    "delivery_route_restricted": "Route access requires permission",
+    "delivery_route_disabled": "Route feature disabled",
+    "delivery_route_pending": "Route not yet retrieved",
+    "delivery_route_fetch_failed": "Could not retrieve route; retry later",
+    "delivery_route_missing": "No route for this delivery"
 }

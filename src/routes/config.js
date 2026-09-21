@@ -31,7 +31,7 @@ const TEST_SECURITY_BYPASS = import.meta.env.VITE_HUB_TEST_BYPASS_SECURITY_CHECK
 const CONFIG_SECTIONS = {
     "general": ["name", "language", "distance_unit", "security_level", "privacy", "logo_url", "hex_color", "hook_audit_log", "banner_background_url", "banner_info_first_row", "banner_background_opacity"],
     "profile": ["sync_discord_email", "must_join_guild", "use_server_nickname", "allow_custom_profile", "use_custom_activity", "avatar_domain_whitelist", "required_connections", "register_methods"],
-    "tracker": ["trackers"],
+    "tracker": ["trackers", "active_delivery_timeout_days"],
     "dlog": ["delivery_rules", "hook_delivery_log", "delivery_webhook_image_urls"],
     "discord-steam": ["discord_guild_id", "discord_client_id", "discord_client_secret", "discord_bot_token", "steam_api_key"],
     "role": ["roles", "perms"],
@@ -694,6 +694,7 @@ const MemoTrackerForm = memo(({ theme, formConfig }) => {
     const { t: tr } = useTranslation();
     return (
         <>
+            <TextField type="number" label={tr("active_delivery_timeout_days")} value={formConfig.state.active_delivery_timeout_days ?? 7} onChange={e => formConfig.setState({...formConfig.state, active_delivery_timeout_days: Number(e.target.value)})} slotProps={{htmlInput:{min:1,max:365,step:1}}} sx={{my:2}} />
             <TruckyRoleMappings />
             {formConfig.state.trackers.length === 0 && (
                 <div style={{ display: "flex", alignItems: "center" }}>

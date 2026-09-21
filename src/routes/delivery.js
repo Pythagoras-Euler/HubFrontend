@@ -13,7 +13,7 @@ import { faStamp } from "@fortawesome/free-solid-svg-icons";
 
 import SimpleBar from "simplebar-react";
 
-import { UNKNOWN, finiteNumber, companyLabel, formatDeliveryTime, DeliveryTimes, SpeedDetails, deliveryEventPositions, canReloadRoute } from "../components/delivery-details";
+import { UNKNOWN, finiteNumber, companyLabel, formatDeliveryTime, DeliveryTimes, SpeedDetails, deliveryEventPositions, canReloadRoute, routeLabel } from "../components/delivery-details";
 import DeliveryVehicles, { vehicleName } from "../components/delivery-vehicles";
 import UserCard from "../components/usercard";
 import ListModal from "../components/listmodal";
@@ -328,11 +328,11 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                 {
                     name: tr("delivery_route"),
                     value:
-                        points !== undefined && points !== null && points.length !== 0 ? (
+                        Array.isArray(points) && points.length >= 2 ? (
                             <span style={{ color: theme.palette.success.main }}>{tr("available")}</span>
                         ) : (
                             <Typography variant="span" sx={{ flexGrow: 1, display: "flex", alignItems: "center", color: theme.palette.error.main }}>
-                                {tr("unavailable")}
+                                {tr(routeLabel(data.route_status, points, deliveryEventPositions(detail.events)))}
                                 {canReloadRoute(data.tracker, data.telemetry) && (
                                     <IconButton onClick={handleReloadRoute}>
                                         <RefreshRounded />
@@ -578,24 +578,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                 }}>
                                 {dlogMap !== null && (
                                     <TileMap
-                                        title={
-                                            dlogRoute !== undefined && dlogRoute !== null && dlogRoute.length !== 0 ? (
-                                                tr("delivery_route")
-                                            ) : (
-                                                <>
-                                                    <span>{tr(dlog.tracker === "trucky" ? (eventPositions.length ? "delivery_event_positions" : "delivery_route_not_provided") : "delivery_route_not_available")}</span>
-
-                                                    {canReloadRoute(dlog.tracker, dlog.telemetry) && (
-                                                        <>
-                                                            <br />
-                                                            {tr("you_may_try_to_reload_it_in_detailed_info_modal")}
-                                                        </>
-                                                    )}
-                                                </>
-                                            )
-                                        }
-                                        key={`${dlog.logid}-${dlogMap}`}
-                                        tilesUrl={dlogMap}
+                                        title={tr(routeLabel(dlog.route_status, dlogRoute, eventPositions))}
                                         markers={dlogRoute.length === 0 ? eventPositions : undefined}
                                         route={dlogRoute}
                                         style={{ height: "100%", minHeight: "380px" }}

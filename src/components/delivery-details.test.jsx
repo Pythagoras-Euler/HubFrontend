@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { companyLabel, formatDeliveryTime, DeliveryTimes, SpeedDetails, deliveryEventPositions, canReloadRoute } from "./delivery-details";
+import { companyLabel, formatDeliveryTime, DeliveryTimes, SpeedDetails, deliveryEventPositions, canReloadRoute, routeLabel } from "./delivery-details";
 
 const tr = key => key;
 const convert = (unit, kind, n) => `${Math.round(unit === "imperial" ? n / 1.609344 : n)}${unit === "imperial" ? "mi" : "km"}`;
@@ -50,5 +50,17 @@ describe("delivery details with incomplete tracker data", () => {
         expect(canReloadRoute("tracksim", "v5...")).toBe(false);
         expect(canReloadRoute("trucky", "")).toBe(false);
         expect(canReloadRoute("custom", "")).toBe(false);
+    });
+});
+
+describe("route availability", () => {
+    it("shows actual route points regardless of provider status", () => {
+        expect(routeLabel("restricted", [[1,2],[3,4]], [])).toBe("delivery_route");
+    });
+    it("distinguishes provider restrictions, pending data, and event markers", () => {
+        expect(routeLabel("restricted", [], [])).toBe("delivery_route_restricted");
+        expect(routeLabel("pending", [], [])).toBe("delivery_route_pending");
+        expect(routeLabel("unsupported", [], [[1,2]])).toBe("delivery_event_positions");
+        expect(routeLabel("missing", [], [])).toBe("delivery_route_missing");
     });
 });
