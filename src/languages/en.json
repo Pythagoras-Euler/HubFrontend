@@ -1279,11 +1279,14 @@
     "chart_no_applications": "No applications in this period",
     "truckershub_deliveries": "TruckersHub deliveries",
     "truckershub_partial": "Syncing / needs attention",
-    "truckershub_progress": "{{month}} ? Imported {{imported}} ? Linked {{linked}} ? Failed {{failed}}",
+    "truckershub_progress": "{{month}} · Imported {{imported}} · Linked {{linked}} · Failed {{failed}}",
     "truckershub_live_unavailable": "Live tracking unavailable",
     "truckershub_review": "Possible duplicate",
     "truckershub_link_existing": "Link existing delivery",
     "truckershub_import_separate": "Import as separate delivery",
     "truckershub_confirm_separate": "Confirm this is a separate transport? It will count toward delivery statistics.",
-    "truckershub_retry": "Retry import"
+    "truckershub_retry": "Retry import",
+    "truckershub_load_failed": "Could not load settings. Please refresh and try again.",
+    "truckershub_saved": "Saved",
+    "truckershub_save_for_webhook": "Save the API token to generate the webhook URL"
 }
