@@ -137,7 +137,7 @@ const Settings = ({ defaultTab = 0 }) => {
         []
     );
     const PRIVACY_TYPES = useMemo(() => Object.keys(PRIVACY_ATTRIBUTES), []);
-    const trackerMapping = { unknown: tr("unknown"), tracksim: "TrackSim", trucky: "Trucky", custom: tr("custom"), unitracker: "UniTracker" };
+    const trackerMapping = { unknown: tr("unknown"), tracksim: "TrackSim", trucky: "Trucky", custom: tr("custom"), unitracker: "UniTracker", truckershub: "TruckersHub" };
 
     const [tab, setTab] = useState(defaultTab);
     const handleChange = useCallback((event, newValue) => {
@@ -1168,6 +1168,9 @@ const Settings = ({ defaultTab = 0 }) => {
                                     }}>
                                     Trucky
                                 </Button>
+                            )}
+                            {trackers.includes("truckershub") && (
+                                <Button variant="contained" color={tracker === "truckershub" ? "info" : "secondary"} onClick={() => updateTracker("truckershub")}>TruckersHub</Button>
                             )}
                             {trackers.includes("unitracker") && (
                                 <Button

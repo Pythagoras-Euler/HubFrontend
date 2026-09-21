@@ -14,7 +14,7 @@ export default function ActiveDeliveries() {
     useEffect(() => {
         let active = true;
         async function load() {
-            const [result] = await makeRequestsAuto([{ url: `${apiPath}/trucky/active`, auth: "prefer" }]);
+            const [result] = await makeRequestsAuto([{ url: `${apiPath}/deliveries/active`, auth: "prefer" }]);
             if (active && Array.isArray(result?.list)) setJobs(result.list);
         }
         load(); const timer = setInterval(load, 60000);
@@ -23,11 +23,11 @@ export default function ActiveDeliveries() {
     if (!jobs.length) return null;
     return <Stack spacing={1} sx={{ my: 2 }}>
         <Typography variant="h6">{tr("in_progress")} ({jobs.length})</Typography>
-        {jobs.map(job => <Accordion key={job.trackerid}>
+        {jobs.map(job => <Accordion key={`${job.tracker}:${job.trackerid}`}>
             <AccordionSummary expandIcon={<ExpandMoreRounded />}>
                 <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
                     <Chip color={job.stale ? "warning" : "info"} size="small" label={tr(job.stale ? "sync_delayed" : "in_progress")} />
-                    <Typography>Trucky #{job.trackerid} · {job.driver || UNKNOWN}</Typography>
+                    <Typography>{(job.trackers || [job.tracker]).map(name => name === "truckershub" ? "TruckersHub" : "Trucky").join(" / ")} #{job.trackerid} · {job.driver || UNKNOWN}</Typography>
                     <Typography>{job.source?.city || UNKNOWN} → {job.destination?.city || UNKNOWN}</Typography>
                 </Stack>
             </AccordionSummary>

@@ -163,7 +163,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
 
             const data = dlogD;
             const detail = dlogD.detail.data.object;
-            const TRACKER = { navio: "Navio", tracksim: "TrackSim", trucky: "Trucky", custom: tr("custom"), unitracker: "UniTracker" };
+            const TRACKER = { navio: "Navio", tracksim: "TrackSim", trucky: "Trucky", custom: tr("custom"), unitracker: "UniTracker", truckershub: "TruckersHub" };
 
             let fine = 0;
             let autoLoad = false;
@@ -318,7 +318,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
 
             const lmi = [
                 { name: tr("log_id"), value: dlogD.public_id || logid },
-                { name: `Tracker`, value: TRACKER[data.tracker] },
+                { name: `Tracker`, value: data.sources?.length ? data.sources.map(source => `${TRACKER[source.tracker] || source.tracker} #${source.trackerid}`).join(" / ") : TRACKER[data.tracker] },
                 { name: `Tracker Job ID`, key: "id" },
                 { name: tr("time_submitted"), value: <TimeDelta key={`${+new Date()}`} timestamp={data.timestamp * 1000} /> },
                 { name: tr("time_spent"), value: CalcInterval(new Date(detail.start_time), new Date(detail.stop_time)) },
@@ -373,7 +373,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                     ),
                 },
                 { name: tr("cargo_mass"), value: formatUnit(userSettings.unit, "kg", detail.cargo.mass) },
-                { name: tr("cargo_damage"), value: <span style={{ color: detail.cargo.damage <= 0.01 ? theme.palette.success.main : detail.cargo.damage <= 0.05 ? theme.palette.warning.main : theme.palette.error.main }}> {(detail.cargo.damage * 100).toFixed(1)}%</span> },
+                { name: tr("cargo_damage"), value: finiteNumber(detail.cargo.damage) === null ? UNKNOWN : <span style={{ color: detail.cargo.damage <= 0.01 ? theme.palette.success.main : detail.cargo.damage <= 0.05 ? theme.palette.warning.main : theme.palette.error.main }}> {(detail.cargo.damage * 100).toFixed(1)}%</span> },
                 {},
                 { name: tr("planned_distance"), value: formatUnit(userSettings.unit, "km", detail.planned_distance) },
                 { name: tr("logged_distance"), value: formatUnit(userSettings.unit, "km", detail.driven_distance) },

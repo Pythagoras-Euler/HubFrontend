@@ -1276,5 +1276,14 @@
   "time_range": "Time range",
     "chart_new_drivers": "New drivers",
     "chart_no_new_drivers": "No new drivers in this period",
-    "chart_no_applications": "No applications in this period"
+    "chart_no_applications": "No applications in this period",
+    "truckershub_deliveries": "TruckersHub deliveries",
+    "truckershub_partial": "Syncing / needs attention",
+    "truckershub_progress": "{{month}} ? Imported {{imported}} ? Linked {{linked}} ? Failed {{failed}}",
+    "truckershub_live_unavailable": "Live tracking unavailable",
+    "truckershub_review": "Possible duplicate",
+    "truckershub_link_existing": "Link existing delivery",
+    "truckershub_import_separate": "Import as separate delivery",
+    "truckershub_confirm_separate": "Confirm this is a separate transport? It will count toward delivery statistics.",
+    "truckershub_retry": "Retry import"
 }

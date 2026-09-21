@@ -637,6 +637,7 @@ const MemberList = () => {
                         }}
                         fullWidth>
                         <MenuItem value="trucky">Trucky</MenuItem>
+                        <MenuItem value="truckershub">TruckersHub</MenuItem>
                         <MenuItem value="unitracker">UniTracker</MenuItem>
                         <MenuItem value="tracksim">TrackSim</MenuItem>
                         <MenuItem value="custom">{tr("custom")}</MenuItem>

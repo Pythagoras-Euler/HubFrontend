@@ -1,4 +1,4 @@
-import TruckersHubRoutes from "../components/truckershub-routes";
+import TruckersHubTracker from "../components/truckershub-tracker";
 import TruckyRoleMappings from "../components/trucky-role-mappings";
 import { useState, useEffect, useCallback, memo, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -599,6 +599,7 @@ const TrackerForm = ({ theme, tracker, onUpdate }) => {
                     <MenuItem key="trucky" value="trucky">
                         Trucky
                     </MenuItem>
+                    <MenuItem key="truckershub" value="truckershub">TruckersHub</MenuItem>
                     <MenuItem key="unitracker" value="unitracker">
                         UniTracker
                     </MenuItem>
@@ -610,6 +611,7 @@ const TrackerForm = ({ theme, tracker, onUpdate }) => {
                     </MenuItem>
                 </TextField>
             </Grid>
+            {tracker.type === "truckershub" ? <Grid size={12}><TruckersHubTracker /></Grid> : <>
             <Grid
                 size={{
                     xs: 6,
@@ -683,6 +685,7 @@ const TrackerForm = ({ theme, tracker, onUpdate }) => {
                     menuPortalTarget={document.body}
                 />
             </Grid>
+            </>}
         </Grid>
     );
 };
@@ -692,7 +695,6 @@ const MemoTrackerForm = memo(({ theme, formConfig }) => {
     return (
         <>
             <TruckyRoleMappings />
-            <TruckersHubRoutes />
             {formConfig.state.trackers.length === 0 && (
                 <div style={{ display: "flex", alignItems: "center" }}>
                     <Typography variant="body2" fontWeight="bold" sx={{ mb: "10px", flexGrow: 1 }}>
@@ -4632,7 +4634,7 @@ const Configuration = () => {
         let doDeleteTracker = false;
         if (config["trackers"]) {
             for (let i = 0; i < config["trackers"].length; i++) {
-                if (config["trackers"][i]["api_token"] === "" || config["trackers"][i]["webhook_secret"] === "") {
+                if (config["trackers"][i].type !== "truckershub" && (config["trackers"][i]["api_token"] === "" || config["trackers"][i]["webhook_secret"] === "")) {
                     doDeleteTracker = true;
                 }
             }

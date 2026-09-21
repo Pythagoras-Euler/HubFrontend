@@ -56,7 +56,7 @@ const Deliveries = () => {
         let active = true;
         async function loadTrucky() {
             const params = new URLSearchParams(removeNUEValues({ after: listParam.after, before: listParam.before }));
-            const [drivers] = await makeRequestsAuto([{ url: `${apiPath}/trucky/drivers?${params}`, auth: "prefer" }]);
+            const [drivers] = await makeRequestsAuto([{ url: `${apiPath}/deliveries/drivers?${params}`, auth: "prefer" }]);
             if (active && Array.isArray(drivers?.list)) setTruckyDrivers(drivers.list);
             if (checkUserPerm(curUserPerm, ["administrator", "import_dlogs"])) {
                 const [status] = await makeRequestsAuto([{ url: `${apiPath}/trucky/sync-status`, auth: true }]);
@@ -349,7 +349,7 @@ const Deliveries = () => {
             )}
             {(truckyDrivers.length > 0 || listParam.steamid) && (
                 <Box sx={{ mb: 2 }}>
-                    <TextField select fullWidth label="Trucky 司机运单统计（按里程排序，含 ETS2 / ATS）"
+                    <TextField select fullWidth label="司机运单统计（按里程排序，含 ETS2 / ATS）"
                         value={listParam.steamid || ""}
                         onChange={e => {
                             const next = { ...listParam, steamid: e.target.value || undefined, userid: undefined };
