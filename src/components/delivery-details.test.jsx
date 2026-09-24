@@ -59,6 +59,8 @@ describe("route availability", () => {
     });
     it("distinguishes provider restrictions, pending data, and event markers", () => {
         expect(routeLabel("restricted", [], [])).toBe("delivery_route_restricted");
+        expect(routeLabel("disabled", [], [[1,2]])).toBe("delivery_event_positions");
+        expect(routeLabel("restricted", [], [[1,2]])).toBe("delivery_event_positions");
         expect(routeLabel("pending", [], [])).toBe("delivery_route_pending");
         expect(routeLabel("unsupported", [], [[1,2]])).toBe("delivery_event_positions");
         expect(routeLabel("missing", [], [])).toBe("delivery_route_missing");

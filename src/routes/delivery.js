@@ -578,6 +578,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
                                 }}>
                                 {dlogMap !== null && (
                                     <TileMap
+                                        tilesUrl={dlogMap}
                                         title={tr(routeLabel(dlog.route_status, dlogRoute, eventPositions))}
                                         markers={dlogRoute.length === 0 ? eventPositions : undefined}
                                         route={dlogRoute}

@@ -66,8 +66,8 @@ export function canReloadRoute(tracker, telemetry) {
 
 export function routeLabel(status, route, positions) {
     if (Array.isArray(route) && route.length >= 2) return "delivery_route";
+    if (positions?.length) return "delivery_event_positions";
     if (status === "restricted") return "delivery_route_restricted";
     if (status === "disabled") return "delivery_route_disabled";
-    if (positions?.length) return "delivery_event_positions";
     return {pending:"delivery_route_pending", unavailable:"delivery_route_fetch_failed", unsupported:"delivery_route_not_provided"}[status] || "delivery_route_missing";
 }
