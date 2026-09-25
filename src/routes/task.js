@@ -1,8 +1,9 @@
+import SpeedDial from "../components/click-speed-dial";
 import { useRef, useState, useEffect, useCallback, useMemo, useContext, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { AppContext } from "../context";
 
-import { Card, CardContent, Typography, Grid, Snackbar, Alert, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button, IconButton, useTheme, Divider, SpeedDial, SpeedDialIcon, SpeedDialAction, Box, MenuItem, FormControlLabel, Checkbox } from "@mui/material";
+import { Card, CardContent, Typography, Grid, Snackbar, Alert, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Button, IconButton, useTheme, Divider, SpeedDialIcon, SpeedDialAction, Box, MenuItem, FormControlLabel, Checkbox } from "@mui/material";
 import { CloseRounded, DeleteRounded, EditNoteRounded, EditRounded, PeopleAltRounded, CheckBoxRounded, CheckBoxOutlineBlankRounded } from "@mui/icons-material";
 import Portal from "@mui/material/Portal";
 

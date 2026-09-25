@@ -1,8 +1,9 @@
+import SpeedDial from "../components/click-speed-dial";
 import { useRef, useEffect, useState, useCallback, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AppContext, CacheContext } from "../context";
 
-import { useTheme, Typography, Snackbar, Alert, SpeedDial, SpeedDialAction, SpeedDialIcon, Dialog, DialogTitle, DialogActions, DialogContent, Grid, Button, LinearProgress, MenuItem } from "@mui/material";
+import { useTheme, Typography, Snackbar, Alert, SpeedDialAction, SpeedDialIcon, Dialog, DialogTitle, DialogActions, DialogContent, Grid, Button, LinearProgress, MenuItem } from "@mui/material";
 import Portal from "@mui/material/Portal";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
