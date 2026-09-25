@@ -177,38 +177,7 @@ export async function FetchProfile({ apiPath, setUsers, setCurUID, setCurUser, s
 
             writeLS("cache-user", curUser, window.dhhost + bearerToken);
 
-            let sync_to = undefined;
-            if (curUser.avatar.startsWith("https://cdn.discordapp.com/")) {
-                sync_to = "discord";
-            } else if (curUser.avatar.startsWith("https://avatars.steamstatic.com/")) {
-                sync_to = "steam";
-            } else if (curUser.avatar.startsWith("https://static.truckersmp.com/")) {
-                sync_to = "truckersmp";
-            }
-            sync_to === undefined ? (sync_to = "") : (sync_to = `?sync_from_${sync_to}=true`);
-            if (sync_to !== "") {
-                let avatarOk = true;
-                fetch(curUser.avatar, {
-                    method: "HEAD",
-                    mode: "no-cors",
-                })
-                    .then(response => {
-                        if (!response.ok) {
-                            avatarOk = false;
-                        }
-                    })
-                    .catch(error => {
-                        avatarOk = false;
-                    })
-                    .finally(async () => {
-                        if (!avatarOk) {
-                            let resp = await customAxios({ url: `${apiPath}/user/profile${sync_to}`, method: "PATCH", headers: { Authorization: `Bearer ${getAuthToken()}` } });
-                            if (resp.status === 200) {
-                                setUsers(users => ({ ...users, [curUser.uid]: resp.data }));
-                            }
-                        }
-                    });
-            }
+            // Avatar refresh is controlled by the saved server-side source preference.
 
             customAxios({ url: `${apiPath}/user/language`, headers: { Authorization: `Bearer ${bearerToken}` } }).then(resp => {
                 if (resp.status === 200) {

@@ -1,4 +1,11 @@
 {
+  "avatar_source": "头像来源",
+  "avatar_current": "保留当前头像",
+  "avatar_external": "外部图片链接",
+  "avatar_upload": "上传到本站",
+  "avatar_choose_file": "选择图片",
+  "avatar_limits": "静态 PNG、JPEG 或 WebP；不超过 2 MiB、单边 4096 像素及总计 800 万像素。保存为最大 512 × 512。",
+  "save_avatar": "保存头像",
   "filter_sort": "筛选与排序",
   "1_minute_ago": "1 分钟前",
   "1_minute_later": "1 分钟后",

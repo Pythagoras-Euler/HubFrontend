@@ -1,4 +1,11 @@
 {
+  "avatar_source": "Avatar source",
+  "avatar_current": "Keep current avatar",
+  "avatar_external": "External image URL",
+  "avatar_upload": "Upload to Hub",
+  "avatar_choose_file": "Choose image",
+  "avatar_limits": "Static PNG, JPEG or WebP; up to 2 MiB, 4096 px per side and 8 megapixels. Saved at up to 512 × 512.",
+  "save_avatar": "Save avatar",
   "filter_sort": "Filters and sorting",
   "1_minute_ago": "1 minute ago",
   "1_minute_later": "In 1 minute",

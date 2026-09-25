@@ -1,3 +1,4 @@
+import AvatarSettings from "../components/avatar-settings";
 import { useState, useCallback, useEffect, useContext, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext, ThemeContext } from "../context";
@@ -548,7 +549,7 @@ const Settings = ({ defaultTab = 0 }) => {
         async (sync_to = undefined) => {
             setNewProfileDisabled(true);
             sync_to === undefined ? (sync_to = "") : (sync_to = `?sync_from_${sync_to}=true`);
-            let resp = await axios({ url: `${apiPath}/user/profile${sync_to}`, method: "PATCH", data: newProfile, headers: { Authorization: `Bearer ${getAuthToken()}` } });
+            let resp = await axios({ url: `${apiPath}/user/profile${sync_to}`, method: "PATCH", data: {name:newProfile.name}, headers: { Authorization: `Bearer ${getAuthToken()}` } });
             if (resp.status === 200) {
                 setUsers(users => ({ ...users, [curUser.uid]: resp.data }));
                 setNewProfile({ name: resp.data.name, avatar: resp.data.avatar });
@@ -1830,76 +1831,14 @@ const Settings = ({ defaultTab = 0 }) => {
                                 <br />
                                 <TextField value={newProfile.name} onChange={e => setNewProfile({ ...newProfile, name: e.target.value })} fullWidth disabled={newProfileDisabled} size="small" />
                             </Grid>
-                            <Grid
-                                size={{
-                                    xs: 12,
-                                    sm: 12,
-                                    md: 12,
-                                    lg: 12,
-                                }}>
-                                <Typography variant="h7" sx={{ fontWeight: 800 }}>
-                                    {tr("avatar_url")}
-                                </Typography>
-                                <br />
-                                <TextField value={newProfile.avatar} onChange={e => setNewProfile({ ...newProfile, avatar: e.target.value })} fullWidth disabled={newProfileDisabled} size="small" />
-                            </Grid>
-                            <Grid
-                                size={{
-                                    xs: 12,
-                                    sm: 12,
-                                    md: 12,
-                                    lg: 12,
-                                }}>
-                                <Button
-                                    variant="contained"
-                                    onClick={() => {
-                                        updateProfile();
-                                    }}
-                                    disabled={newAboutMeDisabled}
-                                    sx={{ mt: "5px" }}
-                                    fullWidth>
+                            <Grid size={12}>
+                                <Button variant="contained" onClick={() => updateProfile()} disabled={newProfileDisabled} fullWidth>
                                     {tr("save")}
                                 </Button>
                             </Grid>
-                            <Grid
-                                size={{
-                                    xs: 12,
-                                    sm: 12,
-                                    md: 12,
-                                    lg: 12,
-                                }}>
-                                <ButtonGroup fullWidth sx={{ mt: "5px" }}>
-                                    <Button variant="contained" color="secondary">
-                                        {tr("sync_to")}
-                                    </Button>
-                                    <Button
-                                        variant="contained"
-                                        color="success"
-                                        onClick={() => {
-                                            updateProfile("discord");
-                                        }}
-                                        disabled={newProfileDisabled}>
-                                        Discord
-                                    </Button>
-                                    <Button
-                                        variant="contained"
-                                        color="warning"
-                                        onClick={() => {
-                                            updateProfile("steam");
-                                        }}
-                                        disabled={newProfileDisabled}>
-                                        Steam
-                                    </Button>
-                                    <Button
-                                        variant="contained"
-                                        color="error"
-                                        onClick={() => {
-                                            updateProfile("truckersmp");
-                                        }}
-                                        disabled={newProfileDisabled}>
-                                        TruckersMP
-                                    </Button>
-                                </ButtonGroup>
+                            <Grid size={12}>
+                                <Divider sx={{mb:2}} />
+                                <AvatarSettings />
                             </Grid>
                         </Grid>
                     </Grid>
