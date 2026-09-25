@@ -2,81 +2,60 @@ import { useState, useEffect, useRef, useCallback, useContext, useMemo } from "r
 import { useTranslation } from "react-i18next";
 import { AppContext } from "../context";
 
-import { Card, Box, Tabs, Tab, Grid, Dialog, DialogActions, DialogContent, DialogTitle, Button, Typography, useTheme } from "@mui/material";
+import { Card, Box, Grid, Dialog, DialogActions, DialogContent, DialogTitle, Button, Typography, TextField, MenuItem } from "@mui/material";
 
+import { makeRequestsAuto } from "../functions";
 import UserCard from "../components/usercard";
 import TileMap from "../components/tilemap";
 
-function tabBtnProps(index, current, theme) {
-    return {
-        "id": `map-tab-${index}`,
-        "aria-controls": `map-tabpanel-${index}`,
-        "style": { color: current === index ? theme.palette.info.main : "inherit" },
-    };
-}
-
-function TabPanel(props) {
-    const { children, value, index, ...other } = props;
-
-    return (
-        <div role="tabpanel" hidden={value !== index} id={`map-tabpanel-${index}`} aria-labelledby={`map-tab-${index}`} {...other}>
-            {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-        </div>
-    );
-}
-
 const Map = () => {
-    const SERVER_ID = { 0: 2, 1: 50, 3: 10 };
+
     const { t: tr } = useTranslation();
-    const theme = useTheme();
-    const { webConfig, users, memberUIDs, dlogDetailsCache } = useContext(AppContext);
+    const { apiPath, webConfig, users, memberUIDs, dlogDetailsCache } = useContext(AppContext);
     const allMembers = memberUIDs.map(uid => users[uid]);
 
-    const [tab, setTab] = useState(0);
-
+    const [servers, setServers] = useState([]);
+    const [serverId, setServerId] = useState('');
+    const server = servers.find(item => item.id === serverId);
     const [points, setPoints] = useState([]);
     const [boundary, setBoundary] = useState({});
     const [displayUser, setDisplayUser] = useState({});
-    const [orangeOnly, setOrangeOnly] = useState(false); // orange => vtc driver
-    const handleToggleVtcOnly = useCallback(() => {
-        setOrangeOnly(prev => !prev);
-    }, []);
-
-    const handleChange = (event, newValue) => {
-        setTab(newValue);
-        setPoints([]);
-    };
-
+    const [orangeOnly, setOrangeOnly] = useState(false);
+    const handleToggleVtcOnly = useCallback(() => setOrangeOnly(value => !value), []);
     const boundaryRef = useRef(boundary);
-    const tabRef = useRef(tab);
+    boundaryRef.current = boundary;
+    const memberIds = allMembers.filter(Boolean).map(member => String(member.truckersmpid));
+    const membersRef = useRef(memberIds);
+    membersRef.current = memberIds;
     useEffect(() => {
-        boundaryRef.current = boundary;
-    }, [boundary]);
+        let active = true;
+        async function load() {
+            const [data] = await makeRequestsAuto([{url: `${apiPath}/map/servers`, auth:false}]);
+            if (!active || !Array.isArray(data?.servers)) return;
+            setServers(data.servers);
+            setServerId(current => data.servers.some(s => s.id === current) ? current : (data.servers.find(s => s.online)?.id ?? data.servers[0]?.id ?? ''));
+        }
+        load(); const timer = setInterval(load, 300000);
+        return () => {active=false; clearInterval(timer);};
+    }, [apiPath]);
     useEffect(() => {
-        tabRef.current = tab;
-    }, [tab]);
-
-    useEffect(() => {
-        const memberTruckersMP = allMembers.map(member => member.truckersmpid);
-        const intervalId = setInterval(async () => {
-            if (SERVER_ID[tabRef.current] !== undefined && boundaryRef.current.x1 !== undefined) {
-                let server_id = SERVER_ID[tabRef.current];
-                const response = await fetch(`https://tracker.ets2map.com/v3/area?x1=${boundaryRef.current.x1}&y1=${boundaryRef.current.y2}&x2=${boundaryRef.current.x2}&y2=${boundaryRef.current.y1}&server=${SERVER_ID[tabRef.current]}`);
+        let active = true, running = false;
+        const controller = new AbortController();
+        setPoints([]); setBoundary({}); boundaryRef.current = {};
+        async function load() {
+            const b = boundaryRef.current;
+            if (running || !server?.online || !server.mapid || b.x1 === undefined) return;
+            running = true;
+            try {
+                const response = await fetch(`https://tracker.ets2map.com/v3/area?x1=${b.x1}&y1=${b.y2}&x2=${b.x2}&y2=${b.y1}&server=${server.mapid}`, {signal:controller.signal});
+                if (!response.ok) throw Error('Map feed unavailable');
                 const data = await response.json();
-                if (server_id !== SERVER_ID[tabRef.current]) {
-                    return;
-                }
-                if (data.Data !== null) {
-                    const points = data.Data.map(item => ({ x: item.X, y: item.Y, color: memberTruckersMP.includes(item.MpId) ? "#f39621" : "#158CFB", info: { ...item } }));
-                    setPoints(points);
-                } else {
-                    setPoints([]);
-                }
-            }
-        }, 5000);
-
-        return () => clearInterval(intervalId);
-    }, []);
+                if (active) setPoints((Array.isArray(data.Data) ? data.Data : []).map(item => ({x:item.X,y:item.Y,color:membersRef.current.includes(String(item.MpId)) ? '#f39621' : '#158CFB',info:{...item}})));
+            } catch {if (active) setPoints([]);} finally {running=false;}
+        }
+        const timer = setInterval(load,5000);
+        return () => {active=false;controller.abort();clearInterval(timer);};
+    }, [server?.id, server?.mapid, server?.online]);
 
     const cityIDs = useMemo(() => {
         let ids = {};
@@ -148,117 +127,17 @@ const Map = () => {
 
     return (
         <Card>
-            <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-                <Tabs value={tab} onChange={handleChange} aria-label="map tabs" color="info" TabIndicatorProps={{ style: { backgroundColor: theme.palette.info.main } }}>
-                    <Tab label={tr("ets2")} {...tabBtnProps(0, tab, theme)} />
-                    <Tab label={tr("ets2_promods")} {...tabBtnProps(1, tab, theme)} />
-                    <Tab label={tr("ets2_promods_classic")} {...tabBtnProps(2, tab, theme)} />
-                    <Tab label={tr("ats")} {...tabBtnProps(3, tab, theme)} />
-                    <Tab label={tr("ats_promods")} {...tabBtnProps(4, tab, theme)} />
-                </Tabs>
+            <Box sx={{p:2}}>
+                <TextField select fullWidth label="TruckersMP" value={serverId} onChange={event => setServerId(event.target.value)}>
+                    {servers.map(item => <MenuItem key={item.id} value={item.id}>{item.game} / {item.name}{item.online ? '' : ` (${tr("offline")})`}</MenuItem>)}
+                </TextField>
             </Box>
-            {tab === 0 && (
-                <TabPanel value={tab} index={0}>
-                    <TileMap
-                        tilesUrl={"https://map.charlws.com/ets2/base/tiles"}
-                        title={
-                            <>
-                                {tr("euro_truck_simulator_2_base_map")}
-                                <br />
-                                {tr("live_data_feed_truckersmp_eu_sim_1")}
-                                <br />{" "}
-                                <span style={{ cursor: "pointer" }} onClick={handleToggleVtcOnly}>
-                                    {orangeOnly ? tr("showing_vtc_drivers_only") : tr("showing_all_players")}&nbsp;{tr("click_to_toggle")}
-                                </span>
-                            </>
-                        }
-                        points={points}
-                        onBoundaryChange={setBoundary}
-                        onPointClick={handlePointClick}
-                        showOrangeOnly={orangeOnly}
-                    />
-                </TabPanel>
-            )}
-            {tab === 1 && (
-                <TabPanel value={tab} index={1}>
-                    <TileMap
-                        tilesUrl={"https://map.charlws.com/ets2/promods/tiles"}
-                        title={
-                            <>
-                                {tr("euro_truck_simulator_2_promods_map")}
-                                <br />
-                                {tr("live_data_feed_truckersmp_eu_pm")}
-                                <br />{" "}
-                                <span style={{ cursor: "pointer" }} onClick={handleToggleVtcOnly}>
-                                    {orangeOnly ? tr("showing_vtc_drivers_only") : tr("showing_all_players")}&nbsp;{tr("click_to_toggle")}
-                                </span>
-                            </>
-                        }
-                        points={points}
-                        onBoundaryChange={setBoundary}
-                        onPointClick={handlePointClick}
-                        showOrangeOnly={orangeOnly}
-                    />
-                </TabPanel>
-            )}
-            {tab === 2 && (
-                <TabPanel value={tab} index={2}>
-                    <TileMap
-                        tilesUrl={"https://map.charlws.com/ets2/promods-classic/tiles"}
-                        title={
-                            <>
-                                {tr("euro_truck_simulator_2_promods_classic_map")}
-                                <br />
-                                {tr("live_data_feed_no_data")}
-                            </>
-                        }
-                        points={points}
-                        onBoundaryChange={setBoundary}
-                        onPointClick={handlePointClick}
-                        showOrangeOnly={orangeOnly}
-                    />
-                </TabPanel>
-            )}
-            {tab === 3 && (
-                <TabPanel value={tab} index={3}>
-                    <TileMap
-                        tilesUrl={"https://map.charlws.com/ats/base/tiles"}
-                        title={
-                            <>
-                                {tr("american_truck_simulator_base_map")}
-                                <br />
-                                {tr("live_data_feed_truckersmp_us_sim")}
-                                <br />{" "}
-                                <span style={{ cursor: "pointer" }} onClick={handleToggleVtcOnly}>
-                                    {orangeOnly ? tr("showing_vtc_drivers_only") : tr("showing_all_players")}&nbsp;{tr("click_to_toggle")}
-                                </span>
-                            </>
-                        }
-                        points={points}
-                        onBoundaryChange={setBoundary}
-                        onPointClick={handlePointClick}
-                        showOrangeOnly={orangeOnly}
-                    />
-                </TabPanel>
-            )}
-            {tab === 4 && (
-                <TabPanel value={tab} index={4}>
-                    <TileMap
-                        tilesUrl={"https://map.charlws.com/ats/promods/tiles"}
-                        title={
-                            <>
-                                {tr("american_truck_simulator_promods_map")}
-                                <br />
-                                {tr("live_data_feed_no_data")}
-                            </>
-                        }
-                        points={points}
-                        onBoundaryChange={setBoundary}
-                        onPointClick={handlePointClick}
-                        showOrangeOnly={orangeOnly}
-                    />
-                </TabPanel>
-            )}
+            {server && <Box sx={{p:2}}>
+                <TileMap key={`${server.id}:${server.promods}`} tilesUrl={`https://map.charlws.com/${server.game.toLowerCase()}/${server.promods ? 'promods' : 'base'}/tiles`}
+                    title={<>{server.game} / {server.name}<br/>{!server.online || !server.mapid ? tr("live_data_feed_no_data") :
+                        <span style={{cursor:'pointer'}} onClick={handleToggleVtcOnly}>{orangeOnly ? tr("showing_vtc_drivers_only") : tr("showing_all_players")}&nbsp;{tr("click_to_toggle")}</span>}</>}
+                    points={points} onBoundaryChange={setBoundary} onPointClick={handlePointClick} showOrangeOnly={orangeOnly}/>
+            </Box>}
             <Dialog open={displayUser.MpId !== undefined} onClose={() => setDisplayUser({})}>
                 <DialogTitle>
                     {displayUser.userid === undefined ? (
