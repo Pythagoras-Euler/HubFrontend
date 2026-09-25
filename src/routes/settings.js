@@ -2369,7 +2369,7 @@ const Settings = ({ defaultTab = 0 }) => {
                                     md: 6,
                                     lg: 8,
                                 }}>
-                                <TextField label={tr("new_password")} value={newPassword} type="password" onChange={e => setNewPassword(e.target.value)} fullWidth size="small" />
+                                <TextField label={tr("new_password")} value={newPassword} type="password" onChange={e => setNewPassword(e.target.value)} helperText={tr("password_requirements")} fullWidth size="small" />
                             </Grid>
                             <Grid
                                 size={{

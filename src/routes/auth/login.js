@@ -41,6 +41,8 @@ const AuthLogin = () => {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [loginFailures, setLoginFailures] = useState({ email: "", count: 0 });
+    const showPasswordHint = loginFailures.email === email.trim().toLowerCase() && loginFailures.count >= 3;
     const [authDisabled, setAuthDisabled] = useState(false);
     const validateEP = useCallback(() => {
         if (email.indexOf("@") === -1) {
@@ -63,6 +65,7 @@ const AuthLogin = () => {
 
                 let resp = await axios({ url: `${apiPath}/auth/password`, data: { "email": email, "password": password, "captcha-response": token }, method: "POST" });
                 if (resp.status === 200) {
+                    setLoginFailures({ email: "", count: 0 });
                     if (resp.data.mfa) {
                         setSnackbarContent(tr("success_redirecting_to_mfa"));
                         setSnackbarSeverity("success");
@@ -77,7 +80,11 @@ const AuthLogin = () => {
                         }, 3000);
                     }
                 } else {
-                    setSnackbarContent(resp.data.error);
+                    if (resp.status === 401) {
+                        const attemptedEmail = email.trim().toLowerCase();
+                        setLoginFailures(previous => ({ email: attemptedEmail, count: previous.email === attemptedEmail ? previous.count + 1 : 1 }));
+                    }
+                    setSnackbarContent(resp.data?.error || tr("operation_failed"));
                     setSnackbarSeverity("error");
                 }
             } else if (action === "register") {
@@ -128,7 +135,7 @@ const AuthLogin = () => {
                 width: "100%",
                 height: "100%",
             }}>
-            <Card sx={{ width: { xs: "100%", sm: "80%", md: "80%", lg: "60%" }, position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
+            <Card sx={{ width: { xs: "100%", sm: "80%", md: "80%", lg: "60%" }, maxHeight: "calc(100dvh - 24px)", overflowY: "auto", position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
                 <CardContent sx={{ padding: { xs: "20px", sm: "30px", md: "40px", lg: "40px" }, mb: "20px" }}>
                     <Grid container spacing={2}>
                         <Grid
@@ -187,6 +194,8 @@ const AuthLogin = () => {
                                 sx={{ cursor: "pointer", width: "fit-content" }}>
                                 {tr("forgot_your_password")}
                             </Typography>
+                            {showPasswordHint && <Alert severity="warning" sx={{mt:2}}>{tr("password_three_failures")}</Alert>}
+                            {(showPasswordHint || action === "register") && <Typography variant="body2" sx={{mt:1}}>{tr("password_requirements")}</Typography>}
                             <br />
                             <ButtonGroup fullWidth>
                                 <Button

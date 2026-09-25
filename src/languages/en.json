@@ -1,4 +1,6 @@
 {
+  "password_requirements": "New passwords must be 8–30 characters, include uppercase and lowercase English letters, a digit (0–9), and a symbol from !@#$%^&*. No whitespace or control characters; at most 72 UTF-8 bytes.",
+  "password_three_failures": "Email or password was incorrect at least 3 times in a row. Check your email, Caps Lock and keyboard layout, or use Forgot password. The requirements below apply to new passwords and do not change existing passwords.",
   "avatar_source": "Avatar source",
   "avatar_current": "Keep current avatar",
   "avatar_external": "External image URL",

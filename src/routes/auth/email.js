@@ -87,7 +87,7 @@ const EmailAuth = () => {
                 width: "100%",
                 height: "100%",
             }}>
-            <Card sx={{ width: 450, padding: "20px", position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
+            <Card sx={{ width: {xs: "calc(100% - 32px)", sm: 450}, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", padding: "20px", position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
                 <CardContent>
                     <Typography variant="h5" sx={{ fontWeight: 800 }}>
                         {title}
@@ -106,7 +106,7 @@ const EmailAuth = () => {
                                 setPassword(e.target.value);
                             }}
                             error={passwordError}
-                            helperText={passwordText}
+                            helperText={<>{passwordText && <>{passwordText}<br /></>}{tr("password_requirements")}</>}
                             sx={{ "mt": "20px", "width": "100%", "& .MuiFormHelperText-root": { color: passwordColor } }}
                             disabled={updateDisabled}
                         />
