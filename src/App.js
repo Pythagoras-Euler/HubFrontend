@@ -420,6 +420,9 @@ function App() {
                                             </Typography>
                                         </div>
                                     )}
+                                    <Typography variant="caption" color="text.secondary">
+                                        <a href="https://db-ip.com" target="_blank" rel="noreferrer">IP Geolocation by DB-IP</a>
+                                    </Typography>
                                 </footer>
                             </div>
                         </SimpleBar>
