@@ -1,3 +1,4 @@
+import { isMemberID } from "../account-ids";
 import React, { useEffect, useState, useContext, useCallback, useMemo } from "react";
 import Select, { components } from "react-select";
 import { useTranslation } from "react-i18next";
@@ -28,7 +29,7 @@ const UserSelect = ({ label, users, onUpdate, isMulti = true, includeCompany = f
   }, [webConfig, userList]);
 
   const options = useMemo(() => {
-    const result = userList.map(user => ({ value: user.userid !== null ? user.userid : user.uid, label: `${user.name} (${user.userid !== null ? user.userid : `UID: ${user.uid}`})` }));
+    const result = userList.map(user => ({ value: user.userid !== null ? user.userid : user.uid, label: `${user.name} (${user.public_user_id || user.userid || ""})` }));
     if (includeCompany) {
       result.unshift({ value: -1000, label: webConfig.name });
     }
@@ -43,7 +44,7 @@ const UserSelect = ({ label, users, onUpdate, isMulti = true, includeCompany = f
     let formattedInit = [];
     for (let i = 0; i < users.length; i++) {
       if (users[i] === undefined || users[i].userid === undefined || users[i].userid === null || memberMap[users[i].userid] === undefined) continue;
-      formattedInit.push({ value: users[i].userid !== null ? users[i].userid : users[i].uid, label: `${memberMap[users[i].userid].name} ${users[i].userid === null || users[i].userid >= 0 ? `(${users[i].userid !== null ? users[i].userid : `UID: ${users[i].uid}`})` : ``}` });
+      formattedInit.push({ value: users[i].userid !== null ? users[i].userid : users[i].uid, label: `${memberMap[users[i].userid].name} ${users[i].userid === null || isMemberID(users[i].userid) ? `(${users[i].public_user_id || users[i].userid || ""})` : ``}` });
     }
     if (selectedUsers !== formattedInit) {
       setSelectedUsers(formattedInit);

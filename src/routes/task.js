@@ -1,3 +1,4 @@
+import { isMemberID } from "../account-ids";
 import SpeedDial from "../components/click-speed-dial";
 import { useRef, useState, useEffect, useCallback, useMemo, useContext, memo } from "react";
 import { useTranslation } from "react-i18next";
@@ -843,9 +844,9 @@ const Task = () => {
                 </Dialog>
             )}
             <SpeedDial ariaLabel={tr("controls")} sx={{ position: "fixed", bottom: 20, right: 20 }} icon={<SpeedDialIcon />}>
-                {curUser.userid !== -1 && <SpeedDialAction key="toggle-completed" icon={listParam.mark_completed !== false ? <CheckBoxRounded /> : <CheckBoxOutlineBlankRounded />} tooltipTitle={listParam.mark_completed !== false ? "Showing All Tasks" : "Showing Pending Tasks"} onClick={() => { setListParam({ ...listParam, order: listParam.mark_completed === false ? "asc" : "desc", mark_completed: listParam.mark_completed === false ? undefined : false, confirm_completed:  listParam.confirm_completed === false ? undefined : false }); }} />}
-                {curUser.userid !== -1 && <SpeedDialAction key="create" icon={<EditNoteRounded />} tooltipTitle={tr("create")} onClick={() => createTask()} />}
-                {curUser.userid !== -1 && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogAction("managers")} />}
+                {isMemberID(curUser.userid) && <SpeedDialAction key="toggle-completed" icon={listParam.mark_completed !== false ? <CheckBoxRounded /> : <CheckBoxOutlineBlankRounded />} tooltipTitle={listParam.mark_completed !== false ? "Showing All Tasks" : "Showing Pending Tasks"} onClick={() => { setListParam({ ...listParam, order: listParam.mark_completed === false ? "asc" : "desc", mark_completed: listParam.mark_completed === false ? undefined : false, confirm_completed:  listParam.confirm_completed === false ? undefined : false }); }} />}
+                {isMemberID(curUser.userid) && <SpeedDialAction key="create" icon={<EditNoteRounded />} tooltipTitle={tr("create")} onClick={() => createTask()} />}
+                {isMemberID(curUser.userid) && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogAction("managers")} />}
             </SpeedDial>
             <Portal>
                 <Snackbar open={!!snackbarContent} autoHideDuration={5000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>

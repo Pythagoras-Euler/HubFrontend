@@ -11,29 +11,40 @@ import SimpleBar from "simplebar-react";
 import TimeDelta from "../components/timedelta";
 import ProfileCharts from "../components/profile-charts";
 import UserCard from "../components/usercard";
+import NotFound from "./404";
+import { normalizeAccountID, isMemberID } from "../account-ids";
 
 import { TSep, ConvertUnit, makeRequestsAuto, getTodayUTC, getMonthUTC } from "../functions";
 
 const Overview = () => {
     const { t: tr } = useTranslation();
-    const { apiPath, users, memberUIDs, curUID, userSettings } = useContext(AppContext);
+    const { apiPath, setUsers, curUID, userSettings } = useContext(AppContext);
     const { cache, setCache } = useContext(CacheContext);
-    const allMembers = memberUIDs.map(uid => users[uid]).filter(Boolean);
 
     const { userid } = useParams(); // profile display handling
-    let memberIdx = allMembers.findIndex(member => member.userid === parseInt(userid));
+    const publicID = normalizeAccountID(userid);
     const [linkedProfile, setLinkedProfile] = useState(null);
-    const profileUser = memberIdx >= 0 ? allMembers[memberIdx] : linkedProfile?.userid === Number(userid) ? linkedProfile : null;
-    const [showProfileModal, setShowProfileModal] = useState(memberIdx !== -1 ? 2 : 0);
+    const [profileMissing, setProfileMissing] = useState(false);
+    const profileUser = linkedProfile?.public_user_id === publicID ? linkedProfile : null;
+    const [showProfileModal, setShowProfileModal] = useState(0);
     useEffect(() => {
-        if (!apiPath || !/^\d+$/.test(userid || "") || memberIdx >= 0) return;
+        setProfileMissing(false);
+        setLinkedProfile(null);
+        setShowProfileModal(0);
+        if (!userid || !apiPath) return;
+        if (!isMemberID(publicID)) { setProfileMissing(true); return; }
         let current = true;
         // Public profile links must not depend on the signed-in member directory.
-        makeRequestsAuto([{ url: `${apiPath}/user/profile?userid=${userid}`, auth: "prefer" }]).then(([profile]) => {
-            if (current && profile?.uid !== undefined && !profile.error) setLinkedProfile(profile);
+        makeRequestsAuto([{ url: `${apiPath}/user/profile?public_user_id=${publicID}`, auth: "prefer" }]).then(([profile]) => {
+            if (!current) return;
+            if (profile?.uid !== undefined && !profile.error) {
+                setUsers(users => ({ ...users, [profile.uid]: { ...users[profile.uid], ...profile } }));
+                setLinkedProfile(profile);
+            }
+            else setProfileMissing(true);
         });
         return () => { current = false; };
-    }, [apiPath, userid, memberIdx]);
+    }, [apiPath, userid]);
     useEffect(() => {
         if (profileUser) setShowProfileModal(2);
     }, [userid, profileUser?.uid]);
@@ -101,6 +112,7 @@ const Overview = () => {
         doLoad();
     }, [apiPath]);
 
+    if (userid && profileMissing) return <NotFound />;
     return (
         <>
             {showProfileModal !== 0 && profileUser && (

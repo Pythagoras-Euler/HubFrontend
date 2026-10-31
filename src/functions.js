@@ -1,3 +1,4 @@
+import { isMemberID } from "./account-ids";
 import axios from "axios";
 import axiosRetry from "axios-retry";
 import LZString from "lz-string";
@@ -186,7 +187,7 @@ export async function FetchProfile({ apiPath, setUsers, setCurUID, setCurUser, s
                 }
             });
 
-            if (curUser.userid !== undefined && curUser.userid !== null && curUser.userid !== -1) {
+            if (curUser.userid !== undefined && curUser.userid !== null && isMemberID(curUser.userid)) {
                 if (isLogin) {
                     // just patch, don't wait
                     customAxios({ url: `${apiPath}/user/timezone`, method: "PATCH", data: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }, headers: { Authorization: `Bearer ${bearerToken}` } });

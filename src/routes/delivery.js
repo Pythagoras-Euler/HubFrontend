@@ -1,3 +1,4 @@
+import { isMemberID } from "../account-ids";
 import SpeedDial from "../components/click-speed-dial";
 import { useState, useEffect, useCallback, useContext, memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -148,7 +149,7 @@ const DeliveryDetail = memo(({ setInternalLogid, divisions, userDivisionIDs, doR
 
             if (divisionM.divisionid === null) divisionM.divisionid = -1;
             if (divisionM.status === null) divisionM.status = -1;
-            if (curUID === null || curUser.userid === null || curUser.userid < 0) {
+            if (curUID === null || curUser.userid === null || !isMemberID(curUser.userid)) {
                 setDivisionMeta(null);
             } else {
                 if (divisionM.error === undefined) {

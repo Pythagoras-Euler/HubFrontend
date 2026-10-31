@@ -1,3 +1,4 @@
+import { isMemberID } from "../account-ids";
 // UserCard component for displaying the user avatar and name,
 // and allowing right-click/long-press for context menu
 
@@ -43,6 +44,7 @@ import RoleSelect from "./roleselect";
 import TimeDelta from "./timedelta";
 import MarkdownRenderer from "./markdown";
 import ProfileCharts from "./profile-charts";
+import AccountIDSettings from "./account-id-settings";
 import CustomTable from "./table";
 import { darkenColor } from "../designs";
 
@@ -331,10 +333,10 @@ const UserCard = props => {
       window.loading += 1;
 
       const [_overall, _details, _point, _dlogList] = await makeRequestsAuto([
-        { url: `${apiPath}/dlog/statistics/summary?userid=${user.userid}`, auth: "prefer" },
-        { url: `${apiPath}/dlog/statistics/details?userid=${user.userid}`, auth: "prefer" },
-        { url: `${apiPath}/dlog/leaderboard?userids=${user.userid}`, auth: true },
-        { url: `${apiPath}/dlog/list?userid=${user.userid}&page=${dlogPage}&page_size=${dlogPageSize}`, auth: "prefer" },
+        { url: `${apiPath}/dlog/statistics/summary?userid=${user.public_user_id || user.userid}`, auth: "prefer" },
+        { url: `${apiPath}/dlog/statistics/details?userid=${user.public_user_id || user.userid}`, auth: "prefer" },
+        { url: `${apiPath}/dlog/leaderboard?userids=${user.public_user_id || user.userid}`, auth: true },
+        { url: `${apiPath}/dlog/list?userid=${user.public_user_id || user.userid}&page=${dlogPage}&page_size=${dlogPageSize}`, auth: "prefer" },
       ]);
 
       let userProfile = {};
@@ -362,7 +364,7 @@ const UserCard = props => {
     async function loadDlogList() {
       window.loading += 1;
 
-      const [_dlogList] = await makeRequestsAuto([{ url: `${apiPath}/dlog/list?userid=${user.userid}&page=${dlogPage}&page_size=${dlogPageSize}`, auth: "prefer" }]);
+      const [_dlogList] = await makeRequestsAuto([{ url: `${apiPath}/dlog/list?userid=${user.public_user_id || user.userid}&page=${dlogPage}&page_size=${dlogPageSize}`, auth: "prefer" }]);
       if (dlogPageRef.current === dlogPage) {
         setDlogList(convertDlogList(_dlogList));
         setDlogTotalItems(_dlogList.total_items);
@@ -396,14 +398,14 @@ const UserCard = props => {
   const [specialColor, setSpecialColor] = useState(null);
   const [profileBackground, setProfilebackground] = useState([darkenColor(PROFILE_COLOR[theme.mode].paper, 0.5), darkenColor(PROFILE_COLOR[theme.mode].paper, 0.5)]);
   const [bannerLanguage, setBannerLanguage] = useState(userSettings.language?.startsWith("zh") ? "zh" : "en");
-  const [profileBannerURL, setProfileBannerURL] = useState(`${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`);
-  useEffect(() => { setProfileBannerURL(`${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`); }, [apiPath, user.userid, bannerLanguage]);
+  const [profileBannerURL, setProfileBannerURL] = useState(`${apiPath}/member/banner?userid=${user.public_user_id || user.userid}&language=${bannerLanguage}`);
+  useEffect(() => { setProfileBannerURL(`${apiPath}/member/banner?userid=${user.public_user_id || user.userid}&language=${bannerLanguage}`); }, [apiPath, user.userid, bannerLanguage]);
   useEffect(() => {
     // reset those stuff, which would be corrected in the code below
     // this is needed in case the old component is reused unexpectedly
     setSpecialColor(null);
     setProfilebackground([darkenColor(PROFILE_COLOR[theme.mode].paper, 0.5), darkenColor(PROFILE_COLOR[theme.mode].paper, 0.5)]);
-    setProfileBannerURL(`${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`);
+    setProfileBannerURL(`${apiPath}/member/banner?userid=${user.public_user_id || user.userid}&language=${bannerLanguage}`);
 
     if (user.discordid === undefined) return;
 
@@ -510,7 +512,7 @@ const UserCard = props => {
 
   const updateRoles = useCallback(async () => {
     setDialogBtnDisabled(true);
-    let resp = await axios({ url: `${apiPath}/member/${user.userid}/roles`, method: "PATCH", data: { roles: newRoles.map(role => role.id ?? role) }, headers: { Authorization: `Bearer ${getAuthToken()}` } });
+    let resp = await axios({ url: `${apiPath}/member/${user.public_user_id || user.userid}/roles`, method: "PATCH", data: { roles: newRoles.map(role => role.id ?? role) }, headers: { Authorization: `Bearer ${getAuthToken()}` } });
     // RoleSelect sends back role objects, but API sends back role ids
     if (resp.status === 204) {
       setUsers(users => ({ ...users, [user.uid]: { ...users[user.uid], roles: newRoles.map(role => role.id ?? role) } }));
@@ -531,7 +533,7 @@ const UserCard = props => {
   const updatePoints = useCallback(async () => {
     // no need to update user info since points are not included in user info
     setDialogBtnDisabled(true);
-    let resp = await axios({ url: `${apiPath}/member/${user.userid}/points`, method: "PATCH", data: { distance: parseInt(newPoints.distance) || 0, distance_note: newPoints.distance_note, bonus: parseInt(newPoints.bonus) || 0, bonus_note: newPoints.bonus_note }, headers: { Authorization: `Bearer ${getAuthToken()}` } });
+    let resp = await axios({ url: `${apiPath}/member/${user.public_user_id || user.userid}/points`, method: "PATCH", data: { distance: parseInt(newPoints.distance) || 0, distance_note: newPoints.distance_note, bonus: parseInt(newPoints.bonus) || 0, bonus_note: newPoints.bonus_note }, headers: { Authorization: `Bearer ${getAuthToken()}` } });
     if (resp.status === 204) {
       setSnackbarContent(tr("points_updated"));
       setSnackbarSeverity("success");
@@ -545,13 +547,13 @@ const UserCard = props => {
   const [distanceHistory, setDistanceHistory] = useState(undefined);
   const loadDistanceHistory = useCallback(async () => {
     setDialogBtnDisabled(true);
-    let resp = await axios({ url: `${apiPath}/dlog/list?userid=${user.userid}&page_size=250&manual=true`, method: "GET", headers: { Authorization: `Bearer ${getAuthToken()}` } });
+    let resp = await axios({ url: `${apiPath}/dlog/list?userid=${user.public_user_id || user.userid}&page_size=250&manual=true`, method: "GET", headers: { Authorization: `Bearer ${getAuthToken()}` } });
     if (resp.status === 200) {
       setDistanceHistory(resp.data.list);
       let totalPages = resp.data.total_pages;
       if (totalPages > 1) {
         for (let i = 2; i <= totalPages; i++) {
-          let resp = await axios({ url: `${apiPath}/dlog/list?userid=${user.userid}&page_size=250&manual=true&page=${i}`, method: "GET", headers: { Authorization: `Bearer ${getAuthToken()}` } });
+          let resp = await axios({ url: `${apiPath}/dlog/list?userid=${user.public_user_id || user.userid}&page_size=250&manual=true&page=${i}`, method: "GET", headers: { Authorization: `Bearer ${getAuthToken()}` } });
           if (resp.status === 200) {
             setDistanceHistory(distanceHistory => [...distanceHistory, ...resp.data.list]);
           } else {
@@ -571,13 +573,13 @@ const UserCard = props => {
   const [bonusHistory, setBonusHistory] = useState(undefined);
   const loadBonusHistory = useCallback(async () => {
     setDialogBtnDisabled(true);
-    let resp = await axios({ url: `${apiPath}/member/bonus/history?userid=${user.userid}&type=all&page_size=250`, method: "GET", headers: { Authorization: `Bearer ${getAuthToken()}` } });
+    let resp = await axios({ url: `${apiPath}/member/bonus/history?userid=${user.public_user_id || user.userid}&type=all&page_size=250`, method: "GET", headers: { Authorization: `Bearer ${getAuthToken()}` } });
     if (resp.status === 200) {
       setBonusHistory(resp.data.list);
       let totalPages = resp.data.total_pages;
       if (totalPages > 1) {
         for (let i = 2; i <= totalPages; i++) {
-          let resp = await axios({ url: `${apiPath}/member/bonus/history?userid=${user.userid}&type=all&page_size=250&page=${i}`, method: "GET", headers: { Authorization: `Bearer ${getAuthToken()}` } });
+          let resp = await axios({ url: `${apiPath}/member/bonus/history?userid=${user.public_user_id || user.userid}&type=all&page_size=250&page=${i}`, method: "GET", headers: { Authorization: `Bearer ${getAuthToken()}` } });
           if (resp.status === 200) {
             setBonusHistory(bonusHistory => [...bonusHistory, ...resp.data.list]);
           } else {
@@ -682,7 +684,7 @@ const UserCard = props => {
 
   const dismissMember = useCallback(async () => {
     setDialogBtnDisabled(true);
-    let resp = await axios({ url: `${apiPath}/member/${user.userid}/dismiss`, method: "POST", headers: { Authorization: `Bearer ${getAuthToken()}` } });
+    let resp = await axios({ url: `${apiPath}/member/${user.public_user_id || user.userid}/dismiss`, method: "POST", headers: { Authorization: `Bearer ${getAuthToken()}` } });
     if (resp.status === 204) {
       setUsers(users => ({ ...users, [user.uid]: { ...users[user.uid], userid: null, roles: [] } }));
       setMemberUIDs(memberUIDs => memberUIDs.filter(uid => uid !== user.uid));
@@ -790,7 +792,7 @@ const UserCard = props => {
       }}
       fullWidth>
       <Card sx={{ padding: "5px", backgroundImage: `linear-gradient(${profileBackground[0]}, ${profileBackground[1]})` }}>
-        {!userSettings.data_saver && !isNaN(user.userid) && (
+        {!userSettings.data_saver && isMemberID(user.userid) && (
           <>
 <ButtonGroup size="small" aria-label="Banner language"><Button onClick={() => setBannerLanguage("zh")} variant={bannerLanguage === "zh" ? "contained" : "outlined"}>中文</Button><Button onClick={() => setBannerLanguage("en")} variant={bannerLanguage === "en" ? "contained" : "outlined"}>English</Button></ButtonGroup>
 <CardMedia
@@ -798,10 +800,10 @@ const UserCard = props => {
             component="img"
             image={profileBannerURL}
             onError={event => {
-              if (event.target.src !== `${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`) event.target.src = `${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`;
+              if (event.target.src !== `${apiPath}/member/banner?userid=${user.public_user_id || user.userid}&language=${bannerLanguage}`) event.target.src = `${apiPath}/member/banner?userid=${user.public_user_id || user.userid}&language=${bannerLanguage}`;
             }}
             onClick={() => {
-              navigator.clipboard.writeText(`${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`);
+              navigator.clipboard.writeText(`${apiPath}/member/banner?userid=${user.public_user_id || user.userid}&language=${bannerLanguage}`);
               setSnackbarContent("Banner URL copied to clipboard!");
               setSnackbarSeverity("success");
             }}
@@ -818,11 +820,11 @@ const UserCard = props => {
                   {user.name}
                 </Typography>
                 <Typography variant="h7" sx={{ flexGrow: 1, display: "flex", alignItems: "center", maxWidth: "fit-content" }}>
-                  {user.userid !== null && user.userid !== undefined && user.userid >= 0 && (
+                  {isMemberID(user.public_user_id || user.userid) && (
                     <Tooltip placement="top" arrow title={tr("user_id")} PopperProps={{ modifiers: [{ name: "offset", options: { offset: [0, -10] } }] }}>
                       <Typography variant="body2">
                         <FontAwesomeIcon icon={faHashtag} />
-                        {user.userid}
+                        {user.public_user_id || user.userid}
                       </Typography>
                     </Tooltip>
                   )}
@@ -875,7 +877,7 @@ const UserCard = props => {
                 <Grid container sx={{ mt: "10px" }}>
                   <Grid size={6}>
                     <Typography variant="body2" sx={{ fontWeight: 800 }}>
-                      {user.userid !== null && user.userid !== -1 ? `MEMBER` : `USER`} {tr("since").toUpperCase()}
+                      {user.userid !== null && isMemberID(user.userid) ? `MEMBER` : `USER`} {tr("since").toUpperCase()}
                     </Typography>
                     {users[user.uid] !== undefined && (
                       <Typography variant="body2" sx={{ display: "inline-block" }}>
@@ -1085,7 +1087,7 @@ const UserCard = props => {
                 </Box>
               </TabPanel>
               <TabPanel value={tab} index={1}>
-                <ProfileCharts userid={user.userid} />
+                <ProfileCharts userid={user.public_user_id || user.userid} />
                 {overallStats && overallStats.job && (
                   <Grid container spacing={2} sx={{ mt: "5px" }}>
                     <Grid
@@ -1465,7 +1467,7 @@ const UserCard = props => {
             e.stopPropagation();
             setShowContextMenu(false);
           }}>
-          {user.userid !== null && user.userid >= 0 && (
+          {user.userid !== null && isMemberID(user.userid) && (
             <MenuItem
               onClick={e => {
                 updateCtxAction(e, "show-profile");
@@ -1476,7 +1478,7 @@ const UserCard = props => {
               {tr("profile")}
             </MenuItem>
           )}
-          {(user.userid === null || user.userid < 0) && (
+          {(user.userid === null || !isMemberID(user.userid)) && (
             <MenuItem
               onClick={e => {
                 updateCtxAction(e, "update-profile");
@@ -1522,7 +1524,7 @@ const UserCard = props => {
               {tr("update_global_note")}
             </MenuItem>
           )}
-          {user.userid !== null && user.userid >= 0 && checkUserPerm(curUserPerm, ["administrator", "manage_divisions", "update_roles"]) && (
+          {user.userid !== null && isMemberID(user.userid) && checkUserPerm(curUserPerm, ["administrator", "manage_divisions", "update_roles"]) && (
             <MenuItem
               onClick={e => {
                 updateCtxAction(e, "update-roles");
@@ -1533,7 +1535,7 @@ const UserCard = props => {
               {tr("update_roles")}
             </MenuItem>
           )}
-          {user.userid !== null && user.userid >= 0 && checkUserPerm(curUserPerm, ["administrator", "update_points"]) && (
+          {user.userid !== null && isMemberID(user.userid) && checkUserPerm(curUserPerm, ["administrator", "update_points"]) && (
             <MenuItem
               onClick={e => {
                 updateCtxAction(e, "update-points");
@@ -1554,7 +1556,7 @@ const UserCard = props => {
             </ListItemIcon>
             {tr("roleban_history")}
           </MenuItem>
-          {user.userid !== null && user.userid >= 0 && (
+          {user.userid !== null && isMemberID(user.userid) && (
             <MenuItem
               onClick={e => {
                 loadDistanceHistory();
@@ -1566,7 +1568,7 @@ const UserCard = props => {
               {tr("distance_history")}
             </MenuItem>
           )}
-          {user.userid !== null && user.userid >= 0 && (checkUserPerm(curUserPerm, ["administrator", "update_points"]) || user.userid === curUser.userid) && (
+          {user.userid !== null && isMemberID(user.userid) && (checkUserPerm(curUserPerm, ["administrator", "update_points"]) || user.userid === curUser.userid) && (
             <MenuItem
               onClick={e => {
                 loadBonusHistory();
@@ -1578,8 +1580,8 @@ const UserCard = props => {
               {tr("bonus_history")}
             </MenuItem>
           )}
-          {(((user.userid === null || user.userid < 0) && user.ban === null && checkUserPerm(curUserPerm, ["administrator", "accept_members"])) || checkUserPerm(curUserPerm, ["administrator", "update_connections"]) || checkUserPerm(curUserPerm, ["administrator", "disable_mfa"])) && <Divider />}
-          {(user.userid === null || user.userid < 0) && user.ban === null && checkUserPerm(curUserPerm, ["administrator", "accept_members"]) && (
+          {(((user.userid === null || !isMemberID(user.userid)) && user.ban === null && checkUserPerm(curUserPerm, ["administrator", "accept_members"])) || checkUserPerm(curUserPerm, ["administrator", "update_connections"]) || checkUserPerm(curUserPerm, ["administrator", "disable_mfa"])) && <Divider />}
+          {(user.userid === null || !isMemberID(user.userid)) && user.ban === null && checkUserPerm(curUserPerm, ["administrator", "accept_members"]) && (
             <MenuItem
               sx={{ color: theme.palette.success.main }}
               onClick={e => {
@@ -1616,8 +1618,8 @@ const UserCard = props => {
               {tr("disable_mfa")}
             </MenuItem>
           )}
-          {(((user.userid === null || user.userid < 0) && user.ban === null && checkUserPerm(curUserPerm, ["administrator", "ban_users"])) || (user.userid !== null && user.userid >= 0 && checkUserPerm(curUserPerm, ["administrator", "dismiss_members"])) || checkUserPerm(curUserPerm, ["administrator", "delete_users"])) && <Divider />}
-          {(user.userid === null || user.userid < 0) && user.ban === null && checkUserPerm(curUserPerm, ["administrator", "ban_users"]) && (
+          {(((user.userid === null || !isMemberID(user.userid)) && user.ban === null && checkUserPerm(curUserPerm, ["administrator", "ban_users"])) || (user.userid !== null && isMemberID(user.userid) && checkUserPerm(curUserPerm, ["administrator", "dismiss_members"])) || checkUserPerm(curUserPerm, ["administrator", "delete_users"])) && <Divider />}
+          {(user.userid === null || !isMemberID(user.userid)) && user.ban === null && checkUserPerm(curUserPerm, ["administrator", "ban_users"]) && (
             <MenuItem
               sx={{ color: theme.palette.error.main }}
               onClick={e => {
@@ -1629,7 +1631,7 @@ const UserCard = props => {
               {tr("ban")}
             </MenuItem>
           )}
-          {(user.userid === null || user.userid < 0) && user.ban !== null && checkUserPerm(curUserPerm, ["administrator", "ban_users"]) && (
+          {(user.userid === null || !isMemberID(user.userid)) && user.ban !== null && checkUserPerm(curUserPerm, ["administrator", "ban_users"]) && (
             <MenuItem
               sx={{ color: theme.palette.error.main }}
               onClick={e => {
@@ -1641,7 +1643,7 @@ const UserCard = props => {
               {tr("unban")}
             </MenuItem>
           )}
-          {user.userid !== null && user.userid >= 0 && checkUserPerm(curUserPerm, ["administrator", "dismiss_members"]) && (
+          {user.userid !== null && isMemberID(user.userid) && checkUserPerm(curUserPerm, ["administrator", "dismiss_members"]) && (
             <MenuItem
               sx={{ color: theme.palette.error.main }}
               onClick={e => {
@@ -1686,6 +1688,7 @@ const UserCard = props => {
               <>UID</>: {user.uid})
             </DialogTitle>
             <DialogContent>
+              <AccountIDSettings uid={user.uid} admin />
               <Typography variant="body2">{tr("custom_profile_may_be_set")}</Typography>
               <Typography variant="body2">{tr("alternatively_sync_to_discord_steam")}</Typography>
               <Grid container spacing={2} sx={{ mt: "5px" }}>
@@ -1812,7 +1815,7 @@ const UserCard = props => {
             <DialogTitle>
               {tr("update_roles")}
               <>|</>
-              {user.name} (<>{tr("user_id")}</>: {user.userid})
+              {user.name} (<>{tr("user_id")}</>: {user.public_user_id || user.userid})
             </DialogTitle>
             <DialogContent>
               <RoleSelect initialRoles={user.roles} onUpdate={setNewRoles} />
@@ -1847,7 +1850,7 @@ const UserCard = props => {
             <DialogTitle>
               {tr("update_global_note")}
               <>|</>
-              {user.name} (<>{tr("user_id")}</>: {user.userid})
+              {user.name} (<>{tr("user_id")}</>: {user.public_user_id || user.userid})
             </DialogTitle>
             <DialogContent>
               <Typography variant="body2">{tr("global_note_works_like_your")}</Typography>
@@ -1882,7 +1885,7 @@ const UserCard = props => {
             <DialogTitle>
               {tr("update_points")}
               <>|</>
-              {user.name} (<>{tr("user_id")}</>: {user.userid})
+              {user.name} (<>{tr("user_id")}</>: {user.public_user_id || user.userid})
             </DialogTitle>
             <DialogContent>
               <Typography variant="body2">{tr("distance_should_be_given_when")}</Typography>
@@ -2594,7 +2597,7 @@ const UserCard = props => {
           setShowPopover(false);
         }}>
         <Card sx={{ maxWidth: 340, minWidth: 340, padding: "5px", backgroundImage: `linear-gradient(${profileBackground[0]}, ${profileBackground[1]})` }}>
-          {!userSettings.data_saver && !isNaN(user.userid) && (
+          {!userSettings.data_saver && isMemberID(user.userid) && (
             <>
 <ButtonGroup size="small" aria-label="Banner language"><Button onClick={() => setBannerLanguage("zh")} variant={bannerLanguage === "zh" ? "contained" : "outlined"}>中文</Button><Button onClick={() => setBannerLanguage("en")} variant={bannerLanguage === "en" ? "contained" : "outlined"}>English</Button></ButtonGroup>
 <CardMedia
@@ -2602,10 +2605,10 @@ const UserCard = props => {
               ref={popoverBannerRef}
               image={profileBannerURL}
               onError={event => {
-                if (event.target.src !== `${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`) event.target.src = `${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`;
+                if (event.target.src !== `${apiPath}/member/banner?userid=${user.public_user_id || user.userid}&language=${bannerLanguage}`) event.target.src = `${apiPath}/member/banner?userid=${user.public_user_id || user.userid}&language=${bannerLanguage}`;
               }}
               onClick={() => {
-                navigator.clipboard.writeText(`${apiPath}/member/banner?userid=${user.userid}&language=${bannerLanguage}`);
+                navigator.clipboard.writeText(`${apiPath}/member/banner?userid=${user.public_user_id || user.userid}&language=${bannerLanguage}`);
                 setSnackbarContent("Banner URL copied to clipboard!");
                 setSnackbarSeverity("success");
               }}
@@ -2621,11 +2624,11 @@ const UserCard = props => {
                   {user.name}
                 </Typography>
                 <Typography variant="h7" sx={{ flexGrow: 1, display: "flex", alignItems: "center", maxWidth: "fit-content" }}>
-                  {user.userid !== null && user.userid !== undefined && user.userid >= 0 && (
+                  {isMemberID(user.public_user_id || user.userid) && (
                     <Tooltip placement="top" arrow title={tr("user_id")} PopperProps={{ modifiers: [{ name: "offset", options: { offset: [0, -10] } }] }}>
                       <Typography variant="body2">
                         <FontAwesomeIcon icon={faHashtag} />
-                        {user.userid}
+                        {user.public_user_id || user.userid}
                       </Typography>
                     </Tooltip>
                   )}
@@ -2660,7 +2663,7 @@ const UserCard = props => {
                   <Grid container sx={{ mt: "10px" }}>
                     <Grid size={6}>
                       <Typography variant="body2" sx={{ fontWeight: 800 }}>
-                        {user.userid !== null && user.userid !== -1 ? `MEMBER` : `USER`} {tr("since").toUpperCase()}
+                        {user.userid !== null && isMemberID(user.userid) ? `MEMBER` : `USER`} {tr("since").toUpperCase()}
                       </Typography>
                       {users[user.uid] !== undefined && (
                         <Typography variant="body2" sx={{ display: "inline-block" }}>

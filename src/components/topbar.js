@@ -1,3 +1,4 @@
+import { isMemberID } from "../account-ids";
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -343,7 +344,7 @@ const TopBar = props => {
       open={isMenuOpen}
       onClose={handleMenuClose}
       sx={{ top: "50px" }}>
-      {curUser.userid !== -1 && curUser.userid !== null && (
+      {isMemberID(curUser.userid) && curUser.userid !== null && (
         <MenuItem onClick={openProfileModal}>
           <ListItemIcon>
             <AccountBoxRounded fontSize="small" />

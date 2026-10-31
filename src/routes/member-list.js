@@ -1,3 +1,4 @@
+import { isMemberID, findAccountByID } from "../account-ids";
 import SpeedDial from "../components/click-speed-dial";
 import { useRef, useEffect, useState, useCallback, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -342,18 +343,18 @@ const MemberList = () => {
 
             let [_userList] = [{}];
             if (search === "") [_userList] = await makeRequestsAuto([{ url: `${apiPath}/member/list?order=desc&order_by=userid&page=${page}&page_size=${pageSize}&${new URLSearchParams(processedParam).toString()}`, auth: true }]);
-            else if (!isNaN(search) && search.length >= 1 && search.length <= 4) {
+            else if (isMemberID(search)) {
                 // is drivers hub id
-                let [_userProfile] = await makeRequestsAuto([{ url: `${apiPath}/user/profile?userid=${search}`, auth: true }]);
-                if (_userProfile.error === undefined && _userProfile.userid >= 0 && _userProfile.userid !== null) {
+                const _userProfile = await findAccountByID(search, async query => (await makeRequestsAuto([{ url: `${apiPath}/user/profile?${new URLSearchParams(query)}`, auth: true }]))[0], true);
+                if (_userProfile) {
                     _userList = { list: [_userProfile], total_items: 1 };
                 } else {
-                    _userList = { list: [], total_items: 0 };
+                    [_userList] = await makeRequestsAuto([{ url: `${apiPath}/member/list?name=${encodeURIComponent(search)}&order=desc&order_by=userid&page=${page}&page_size=${pageSize}&${new URLSearchParams(processedParam)}`, auth: true }]);
                 }
             } else if (!isNaN(search) && search.length >= 5 && search.length <= 10) {
                 // is truckersmp id
                 let [_userProfile] = await makeRequestsAuto([{ url: `${apiPath}/user/profile?truckersmpid=${search}`, auth: true }]);
-                if (_userProfile.error === undefined && _userProfile.userid >= 0 && _userProfile.userid !== null) {
+                if (_userProfile.error === undefined && isMemberID(_userProfile.userid) && _userProfile.userid !== null) {
                     _userList = { list: [_userProfile], total_items: 1 };
                 } else {
                     _userList = { list: [], total_items: 0 };
@@ -361,7 +362,7 @@ const MemberList = () => {
             } else if (!isNaN(search) && search.length === 17 && search.startsWith("76561")) {
                 // is steam id
                 let [_userProfile] = await makeRequestsAuto([{ url: `${apiPath}/user/profile?steamid=${search}`, auth: true }]);
-                if (_userProfile.error === undefined && _userProfile.userid >= 0 && _userProfile.userid !== null) {
+                if (_userProfile.error === undefined && isMemberID(_userProfile.userid) && _userProfile.userid !== null) {
                     _userList = { list: [_userProfile], total_items: 1 };
                 } else {
                     _userList = { list: [], total_items: 0 };
@@ -369,7 +370,7 @@ const MemberList = () => {
             } else if (!isNaN(search) && search.length >= 17 && search.length <= 19) {
                 // is discord id
                 let [_userProfile] = await makeRequestsAuto([{ url: `${apiPath}/user/profile?discordid=${search}`, auth: true }]);
-                if (_userProfile.error === undefined && _userProfile.userid >= 0 && _userProfile.userid !== null) {
+                if (_userProfile.error === undefined && isMemberID(_userProfile.userid) && _userProfile.userid !== null) {
                     _userList = { list: [_userProfile], total_items: 1 };
                 } else {
                     _userList = { list: [], total_items: 0 };

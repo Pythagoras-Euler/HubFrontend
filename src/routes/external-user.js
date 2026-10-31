@@ -1,3 +1,4 @@
+import { findAccountByID } from "../account-ids";
 import SpeedDial from "../components/click-speed-dial";
 import { useRef, useEffect, useState, useCallback, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -158,13 +159,13 @@ const ExternalUsers = () => {
             let [_userList] = [{}];
             if (userSearch === "") {
                 [_userList] = await makeRequestsAuto([{ url: `${apiPath}/user/list?order=desc&order_by=uid&page=${userPage}&page_size=${userPageSize}&${new URLSearchParams(processedParam).toString()}`, auth: true }]);
-            } else if (!isNaN(userSearch) && userSearch.length >= 1 && userSearch.length <= 4) {
+            } else if (/^[A-Za-z0-9]{4,6}$/.test(userSearch)) {
                 // is drivers hub id
-                let [_userProfile] = await makeRequestsAuto([{ url: `${apiPath}/user/profile?userid=${userSearch}`, auth: true }]);
-                if (_userProfile.error === undefined && _userProfile.userid >= 0 && _userProfile.userid !== null) {
+                const _userProfile = await findAccountByID(userSearch, async query => (await makeRequestsAuto([{ url: `${apiPath}/user/profile?${new URLSearchParams(query)}`, auth: true }]))[0]);
+                if (_userProfile) {
                     _userList = { list: [_userProfile], total_items: 1 };
                 } else {
-                    _userList = { list: [], total_items: 0 };
+                    [_userList] = await makeRequestsAuto([{ url: `${apiPath}/user/list?name=${encodeURIComponent(userSearch)}&order=desc&order_by=uid&page=${userPage}&page_size=${userPageSize}&${new URLSearchParams(processedParam)}`, auth: true }]);
                 }
             } else if (!isNaN(userSearch) && userSearch.length >= 5 && userSearch.length <= 10) {
                 // is truckersmp id
@@ -247,13 +248,14 @@ const ExternalUsers = () => {
             let [_banList] = [{}];
             if (banSearch === "") {
                 [_banList] = await makeRequestsAuto([{ url: `${apiPath}/user/ban/list?order=desc&order_by=uid&page=${userPage}&page_size=${banPageSize}&${new URLSearchParams(processedParam).toString()}`, auth: true }]);
-            } else if (!isNaN(banSearch) && banSearch.length >= 1 && banSearch.length <= 4) {
+            } else if (/^[A-Za-z0-9]{4,6}$/.test(banSearch)) {
                 // is drivers hub id
-                let [_userProfile] = await makeRequestsAuto([{ url: `${apiPath}/user/profile?userid=${banSearch}`, auth: true }]);
-                if (_userProfile.error === undefined && _userProfile.userid >= 0 && _userProfile.userid !== null) {
-                    _userList = { list: [_userProfile], total_items: 1 };
+                const _userProfile = await findAccountByID(banSearch, async query => (await makeRequestsAuto([{ url: `${apiPath}/user/profile?${new URLSearchParams(query)}`, auth: true }]))[0]);
+                if (_userProfile) {
+                    const [_banProfile] = await makeRequestsAuto([{ url: `${apiPath}/user/ban?uid=${_userProfile.uid}`, auth: true }]);
+                    _banList = _banProfile.error === undefined ? { list: [_banProfile], total_items: 1 } : { list: [], total_items: 0 };
                 } else {
-                    _userList = { list: [], total_items: 0 };
+                    [_banList] = await makeRequestsAuto([{ url: `${apiPath}/user/ban/list?name=${encodeURIComponent(banSearch)}&order=desc&order_by=uid&page=${userPage}&page_size=${banPageSize}&${new URLSearchParams(processedParam)}`, auth: true }]);
                 }
             } else if (!isNaN(banSearch) && banSearch.length >= 5 && banSearch.length <= 10) {
                 // is truckersmp id

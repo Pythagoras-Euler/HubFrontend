@@ -1,4 +1,6 @@
+import { isMemberID } from "../account-ids";
 import AvatarSettings from "../components/avatar-settings";
+import AccountIDSettings from "../components/account-id-settings";
 import { useState, useCallback, useEffect, useContext, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext, ThemeContext } from "../context";
@@ -1809,6 +1811,8 @@ const Settings = ({ defaultTab = 0 }) => {
                 </Grid>
             </TabPanel>
             <TabPanel value={tab} index={1}>
+                <AccountIDSettings uid={curUser.uid} />
+                <AccountIDSettings uid={curUser.uid} admin />
                 <Grid container spacing={2}>
                     <Grid
                         size={{
@@ -2001,7 +2005,7 @@ const Settings = ({ defaultTab = 0 }) => {
                                 component="img"
                                 image={remoteUserConfig.profile_banner_url}
                                 onError={event => {
-                                    event.target.src = `${apiPath}/member/banner?userid=${curUser.userid}`;
+                                    event.target.src = `${apiPath}/member/banner?userid=${curUser.public_user_id || curUser.userid}`;
                                 }}
                                 alt=""
                                 sx={{ borderRadius: "5px 5px 0 0" }}
@@ -2013,11 +2017,11 @@ const Settings = ({ defaultTab = 0 }) => {
                                             {curUser.name}
                                         </Typography>
                                         <Typography variant="h7" sx={{ flexGrow: 1, display: "flex", alignItems: "center", maxWidth: "fit-content" }}>
-                                            {curUser.userid !== null && curUser.userid !== undefined && curUser.userid >= 0 && (
+                                            {isMemberID(curUser.public_user_id || curUser.userid) && (
                                                 <Tooltip placement="top" arrow title={tr("user_id")} PopperProps={{ modifiers: [{ name: "offset", options: { offset: [0, -10] } }] }}>
                                                     <Typography variant="body2">
                                                         <FontAwesomeIcon icon={faHashtag} />
-                                                        {curUser.userid}
+                                                        {curUser.public_user_id || curUser.userid}
                                                     </Typography>
                                                 </Tooltip>
                                             )}
@@ -2528,7 +2532,7 @@ const Settings = ({ defaultTab = 0 }) => {
                             md: 6,
                             lg: 6,
                         }}>
-                        {curUser.userid !== null && curUser.userid >= 0 && (
+                        {curUser.userid !== null && isMemberID(curUser.userid) && (
                             <>
                                 <Typography variant="h7" sx={{ color: theme.palette.warning.main }}>
                                     {tr("leave")}
@@ -2577,7 +2581,7 @@ const Settings = ({ defaultTab = 0 }) => {
                                 </Grid>
                             </>
                         )}
-                        {(curUser.userid === null || curUser.userid < 0) && (
+                        {(curUser.userid === null || !isMemberID(curUser.userid)) && (
                             <>
                                 <Typography variant="h7" sx={{ color: theme.palette.warning.main, fontWeight: 800 }}>
                                     {tr("delete_account")}

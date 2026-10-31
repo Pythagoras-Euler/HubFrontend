@@ -1,3 +1,4 @@
+import { isMemberID } from "../account-ids";
 import { useState, useEffect, useCallback, useContext, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AppContext, ThemeContext } from "../context";
@@ -340,7 +341,7 @@ const Loader = ({ onLoaderLoaded }) => {
         const curUser = readLS("cache-user", window.dhhost + bearerToken);
         setUsers(users => ({ ...users, [curUser.uid]: curUser }));
         setCurUID(curUser.uid);
-        setIsMember(curUser.userid !== undefined && curUser.userid !== null && curUser.userid !== -1);
+        setIsMember(curUser.userid !== undefined && curUser.userid !== null && isMemberID(curUser.userid));
 
         FetchProfile({ ...appContext, apiPath: apiPath, webConfig: webConfig }).then(auth => {
           setIsMember(auth.member);

@@ -490,7 +490,7 @@ const AllApplication = () => {
                         </Typography>
                         <br />
                         {Object.entries(detailApp.application).map(([question, answer]) => {
-                            const matchq = question.match(/\[Message\] (.*) \((\d+)\) #(\d+)/);
+                            const matchq = question.match(/\[Message\] (.*) \((-?[A-Za-z0-9]+)\) #(\d+)/);
                             if (matchq) {
                                 question = (
                                     <>

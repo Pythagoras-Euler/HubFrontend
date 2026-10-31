@@ -1,3 +1,4 @@
+import { isMemberID } from "../account-ids";
 import SpeedDial from "../components/click-speed-dial";
 import { useState, useEffect, useCallback, useContext, memo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -1080,7 +1081,7 @@ const Events = () => {
             <SpeedDial ariaLabel={tr("controls")} sx={{ position: "fixed", bottom: 20, right: 20 }} icon={<SpeedDialIcon />}>
                 {checkUserPerm(curUserPerm, ["administrator", "manage_events"]) && <SpeedDialAction key="create" icon={<EditNoteRounded />} tooltipTitle={tr("create")} onClick={() => createEvent()} />}
                 {checkUserPerm(curUserPerm, ["administrator", "manage_events"]) && <SpeedDialAction key="sync-truckersmp" icon={<CloudSyncRounded />} tooltipTitle={tr("sync_truckersmp_events")} onClick={syncTruckersMPEvents} />}
-                {curUser.userid !== -1 && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogManagers(true)} />}
+                {isMemberID(curUser.userid) && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogManagers(true)} />}
             </SpeedDial>
             <Dialog open={dialogDelete} onClose={() => setDialogDelete(false)}>
                 <DialogTitle>{tr("delete_event")}</DialogTitle>

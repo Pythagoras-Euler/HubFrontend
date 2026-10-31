@@ -1,3 +1,4 @@
+import { isMemberID } from "../account-ids";
 import SpeedDial from "../components/click-speed-dial";
 import { useEffect, useState, useCallback, useContext, useRef, memo } from "react";
 import { useTranslation } from "react-i18next";
@@ -691,7 +692,7 @@ const DownloadableItem = () => {
             </Dialog>
             <SpeedDial ariaLabel={tr("controls")} sx={{ position: "fixed", bottom: 20, right: 20 }} icon={<SpeedDialIcon />}>
                 {checkUserPerm(curUserPerm, ["administrator", "manage_downloads"]) && <SpeedDialAction key="create" icon={<EditNoteRounded />} tooltipTitle={tr("create")} onClick={() => createDownloadableItem()} />}
-                {curUser.userid !== -1 && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogManagers(true)} />}
+                {isMemberID(curUser.userid) && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogManagers(true)} />}
                 <SpeedDialAction key="refresh" icon={<RefreshRounded />} tooltipTitle={tr("refresh")} onClick={() => doLoad()} />
             </SpeedDial>
             <Portal>

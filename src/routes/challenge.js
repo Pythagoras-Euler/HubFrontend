@@ -1,3 +1,4 @@
+import { isMemberID } from "../account-ids";
 import SpeedDial from "../components/click-speed-dial";
 import { useRef, useState, useEffect, useCallback, useContext, useMemo, memo } from "react";
 import { useTranslation } from "react-i18next";
@@ -1311,7 +1312,7 @@ const Challenges = () => {
             </Dialog>
             <SpeedDial ariaLabel={tr("controls")} sx={{ position: "fixed", bottom: 20, right: 20 }} icon={<SpeedDialIcon />}>
                 {checkUserPerm(curUserPerm, ["administrator", "manage_challenges"]) && <SpeedDialAction key="create" icon={<EditNoteRounded />} tooltipTitle={tr("create")} onClick={() => createChallenge()} />}
-                {!isNaN(curUser.userid) && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogManagers(true)} />}
+                {isMemberID(curUser.userid) && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogManagers(true)} />}
                 <SpeedDialAction key="refresh" icon={<RefreshRounded />} tooltipTitle={tr("refresh")} onClick={() => setDoReload(+new Date())} />
             </SpeedDial>
             <Portal>

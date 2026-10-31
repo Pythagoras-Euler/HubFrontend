@@ -1,3 +1,4 @@
+import { isMemberID } from "../account-ids";
 import SpeedDial from "../components/click-speed-dial";
 import { useRef, useEffect, useState, useCallback, useContext, memo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -708,7 +709,7 @@ const Divisions = () => {
                             setDialogOpen("settings");
                         }}
                     />
-                    {curUser.userid !== -1 && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogManagers(true)} />}
+                    {isMemberID(curUser.userid) && <SpeedDialAction key="managers" icon={<PeopleAltRounded />} tooltipTitle={tr("managers")} onClick={() => setDialogManagers(true)} />}
                     <SpeedDialAction key="refresh" icon={<RefreshRounded />} tooltipTitle={tr("refresh")} onClick={() => setDoReload(+new Date())} />
                 </SpeedDial>
             )}

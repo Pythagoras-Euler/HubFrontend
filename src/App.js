@@ -375,7 +375,7 @@ function App() {
                                         <Route path="/event/:eventid" element={<Events />} />
                                         <Route path="/economy" element={<Economy />}></Route>
                                         <Route path="/member" element={<Members />}></Route>
-                                        <Route path="/member/:userid" element={<Overview />} />
+                                        <Route path="/u/:userid" element={<Overview />} />
                                         <Route path="/leaderboard" element={<Leaderboard />}></Route>
                                         <Route path="/ranking" element={<Ranking />}></Route>
                                         {/* <Route path="/freightmaster" element={<FreightMaster />}></Route> */}
